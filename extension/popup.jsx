@@ -1,11 +1,12 @@
 import browser from 'webextension-polyfill'
 import {render} from 'react-dom'
-import React, { useState, useEffect } from 'react';
-import CryptoJS from 'crypto-js';
+import React, { useState, useEffect } from 'react'
+import CryptoJS from 'crypto-js'
 import { getPublicKey } from 'nostr-tools/pure'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
 import {hexToBytes, bytesToHex} from '@noble/hashes/utils'
+import { encrypt, decrypt } from './common'
 
 function Popup() {
   const [masterPassword, setMasterPassword] = useState('')
@@ -132,27 +133,6 @@ function Popup() {
     fetchData()
   }
 
-  const encrypt = (data, password) => {
-    data = CryptoJS.AES.encrypt(JSON.stringify(data), password).toString()
-    return data
-  }
-
-  const decrypt = (ciphertext, password) => {
-    var bytes  = CryptoJS.AES.decrypt(ciphertext, password)
-    return JSON.parse(bytes.toString(CryptoJS.enc.Utf8))
-  }
-
-  const handleWalletExport = async () => {
-    const storage = await browser.storage.local.get(['encryptedWallet'])
-    const jsonData = JSON.stringify({ backup: storage.encryptedWallet }, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'NostrameWalletData.json';
-    a.click();
-  }
-
   const handleFileChange = (event) => {
     const file = event.target.files[0]
     setFile(file)
@@ -183,17 +163,11 @@ function Popup() {
     }
   }
 
-  const handleLogout = async () => {
-    if (await confirm("Are you sure you want to logout? Make sure if you have a backup before you continue.")) {
-      setAccounts([]);
-      setWallet({})
-      await browser.storage.local.set({ 
-        encryptedWallet: '',
-        wallet: {},
-        password: '',
-        isAuthenticated: false,
-      })
-      setIsAuthenticated(false)
+  const openOptionsButton = async () => {
+    if (browser.runtime.openOptionsPage) {
+      browser.runtime.openOptionsPage()
+    } else {
+      window.open(browser.runtime.getURL('options.html'))
     }
   }
 
@@ -239,7 +213,7 @@ function Popup() {
             <h1>Nostrame</h1>
             <button type="button" className="btn" onClick={() => setStep(2)}>I have an account</button>
             <br />
-            <button type="button" className="btn" onClick={() => setStep(4)}>Import backup</button>
+            <button type="button" className="btn" onClick={openOptionsButton}>Import backup</button>
             <br />
             <button type="button" className="btn" onClick={createNewAccount}>Create new account</button>
           </div>
@@ -318,29 +292,6 @@ function Popup() {
             </form>
           </div>
         )
-      case 4:
-        return (
-          <div className="App">
-            <h1>Import backup</h1>
-
-            <form onSubmit={handleWalletImport}>
-              <input type="file" required onChange={handleFileChange} />
-              <br />
-              <input
-                type="password"
-                placeholder="Password"
-                name="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <br />
-              <button type="submit" className="btn">Upload wallet</button>
-              <br />
-              <button type="button" className="btn" onClick={() => setStep(1)}>Back</button>
-            </form>
-          </div>
-        )
     }
   }
 
@@ -349,7 +300,7 @@ function Popup() {
       <h1>Nostrame</h1>
       {isLocked ? (
         <form onSubmit={unlockWallet}>
-          <label>Wallet is locked.</label>
+          <label>Wallet is locked</label>
           <br />
           <input
             type="password"
@@ -368,9 +319,7 @@ function Popup() {
           &nbsp;
           <button type="button" onClick={lockWallet}>Lock now</button>
           &nbsp;
-          <button type="button" onClick={handleWalletExport}>Make backup</button>
-          &nbsp;
-          <button type="button" onClick={handleLogout}>Logout</button>
+          <button type="button" onClick={openOptionsButton}>Options</button>
           <div>
             <h2>Accounts</h2>
             <div>

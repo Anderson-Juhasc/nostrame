@@ -3,6 +3,7 @@
   "description": "Nostr Account Manager Extension",
   "version": "0.0.1",
   "manifest_version": 3,
+  "options_page": "options.html",
   "action": {
     "default_popup": "popup.html"
   },

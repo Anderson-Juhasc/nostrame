@@ -10,7 +10,7 @@ esbuild
     entryPoints: {
       'popup.build': './extension/popup.jsx',
       //'prompt.build': './extension/prompt.jsx',
-      //'options.build': './extension/options.jsx',
+      'options.build': './extension/options.jsx',
       //'background.build': './extension/background.js',
       //'content-script.build': './extension/content-script.js'
     },
