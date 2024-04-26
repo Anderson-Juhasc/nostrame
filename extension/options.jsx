@@ -15,12 +15,12 @@ function Options() {
     fetchData()
 
     browser.storage.onChanged.addListener(function(changes, namespace) {
-      for (let key in changes) {
-        if (key === 'isLocked') {
+      //for (let key in changes) {
+      //  if (key === 'isLocked') {
           // Reload data
           fetchData()
-        }
-      }
+      //  }
+      //}
     });
   }, [])
 

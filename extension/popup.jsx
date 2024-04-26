@@ -22,12 +22,82 @@ function Popup() {
     mnemonic: '',
     passphrase: '',
     accountIndex: 0,
+    accounts: [],
   })
   const [accounts, setAccounts] = useState([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [accountEditing, setAccountEditing] = useState({})
 
   useEffect(async () => {
     fetchData()
   }, []);
+
+  const fetchData = async () => {
+    const storage = await browser.storage.local.get()
+
+    console.log(storage)
+
+    if (storage.isLocked) {
+      setIsLocked(true)
+    }
+
+    if (storage.isAuthenticated) {
+      let loadAccounts = []
+      let l = storage.wallet.accounts.length
+      for (let i = 0; i < l; i++) {
+        const prvKey = storage.wallet.accounts[i].prvKey
+        const nsec = nip19.nsecEncode(hexToBytes(prvKey))
+        const pubKey = getPublicKey(prvKey)
+        const npub = nip19.npubEncode(pubKey)
+        loadAccounts = [
+          ...loadAccounts, 
+          { 
+            index: i,
+            name: storage.wallet.accounts[i].name,
+            prvKey,
+            nsec,
+            pubKey,
+            npub,
+            format: 'bech32'
+          }
+        ]
+      }
+      setIsAuthenticated(storage.isAuthenticated)
+      setWallet(storage.wallet)
+      setAccounts(loadAccounts)
+    }
+  }
+
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+  }
+
+  const handleModalOpen = (account) => {
+    setIsModalOpen(true)
+    setAccountEditing(account)
+  }
+
+  const saveEditingAccount = async (e) => {
+    e.preventDefault()
+    const storage = await browser.storage.local.get(['wallet', 'password'])
+    let walletData = storage.wallet
+
+    walletData.accounts.forEach((item) => {
+      if (item.index === accountEditing.index) {
+        item.name = accountEditing.name
+      }
+    })
+
+    const encryptedWallet = encrypt(walletData, storage.password)
+    await browser.storage.local.set({ 
+      wallet: walletData,
+      encryptedWallet,
+    })
+
+    handleModalClose()
+    fetchData()
+    setAccountEditing({})
+  }
 
   const hideStringMiddle = (inputString, startChars = 10, endChars = 8) => {
     if (inputString.length <= startChars + endChars) {
@@ -59,42 +129,16 @@ function Popup() {
     setWallet(prevWallet => ({
       ...prevWallet,
       [name]: value
+    }))
+  }
+
+  const accountEditingChange = (e) => {
+    const { name, value } = e.target;
+    setAccountEditing(prev => ({
+      ...prev,
+      [name]: value
     }));
   };
-
-  const fetchData = async () => {
-    const storage = await browser.storage.local.get()
-
-    console.log(storage)
-
-    if (storage.isLocked) {
-      setIsLocked(true)
-    }
-
-    if (storage.isAuthenticated) {
-      let loadAccounts = []
-      for (let i = 0; i < storage.wallet.accountIndex; i++) {
-        const prvKey = privateKeyFromSeedWords(storage.wallet.mnemonic, storage.wallet.passphrase, i)
-        const nsec = nip19.nsecEncode(hexToBytes(prvKey))
-        const pubKey = getPublicKey(prvKey)
-        const npub = nip19.npubEncode(pubKey)
-        loadAccounts = [
-          ...loadAccounts, 
-          { 
-            index: i,
-            prvKey,
-            nsec,
-            pubKey,
-            npub,
-            format: 'bech32'
-          }
-        ]
-      }
-      setIsAuthenticated(storage.isAuthenticated)
-      setWallet(storage.wallet)
-      setAccounts(loadAccounts)
-    }
-  }
 
   async function toggleFormat(account) {
     let newFormat = account.format === 'bech32' ? 'hex' : 'bech32'
@@ -116,11 +160,21 @@ function Popup() {
 
   async function saveAccount(e) {
     e.preventDefault()
+
     const walletData = {
       mnemonic: wallet.mnemonic,
       passphrase: wallet.passphrase,
-      accountIndex: 1,
+      accountIndex: 0,
+      accounts: []
     }
+
+    const prvKey = privateKeyFromSeedWords(walletData.mnemonic, walletData.passphrase, walletData.accountIndex)
+    walletData.accounts.push({
+      index: walletData.accountIndex,
+      name: 'Account ' + walletData.accountIndex,
+      prvKey,
+    })
+
     const encryptedWallet = encrypt(walletData, password)
     await browser.storage.local.set({ 
       wallet: walletData,
@@ -172,12 +226,19 @@ function Popup() {
   }
 
   const deriveNewAccount = async () => {
-    const storage = await browser.storage.local.get(['password'])
-    wallet.accountIndex++
-    const encryptedWallet = encrypt(wallet, storage.password)
+    const storage = await browser.storage.local.get(['wallet', 'password'])
+    let walletData = storage.wallet
+    walletData.accountIndex++
+    const prvKey = privateKeyFromSeedWords(walletData.mnemonic, walletData.passphrase, walletData.accountIndex)
+    walletData.accounts.push({
+      index: walletData.accountIndex,
+      name: 'Account ' + walletData.accountIndex,
+      prvKey,
+    })
+    const encryptedWallet = encrypt(walletData, storage.password)
     await browser.storage.local.set({ 
-      wallet: wallet,
-      encryptedWallet
+      wallet: walletData,
+      encryptedWallet,
     })
     fetchData()
   }
@@ -186,7 +247,9 @@ function Popup() {
     setIsLocked(true)
     await browser.storage.local.set({ 
       isLocked: true,
-      wallet: {},
+      wallet: {
+        accounts: [],
+      },
       password: '',
     })
   }
@@ -325,9 +388,11 @@ function Popup() {
             <div>
               {accounts.map((account, index) => (
                 <div key={index} className="break-string">
-                  <strong>Account {index}:</strong>
+                  <strong>{account.name}:</strong>
                   &nbsp;
                   <button onClick={() => toggleFormat(account)}>{account.format === 'bech32' ? 'hex' : 'bech32'}</button>
+                  &nbsp;
+                  <button type="button" onClick={() => { handleModalOpen(account) }}>Edit</button>
                   <br />
                   <strong>{account.format === 'bech32' ? 'nsec' : 'Private Key'}:</strong>
                   &nbsp;
@@ -345,6 +410,30 @@ function Popup() {
               ))}
             </div>
           </div>
+
+          {isModalOpen && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <div className="modal-content">
+                  <span className="close" onClick={handleModalClose}>
+                    &times;
+                  </span>
+                  <h2>Edit Account</h2>
+                  <form onSubmit={saveEditingAccount}>
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      name="name"
+                      value={accountEditing.name}
+                      onChange={accountEditingChange}
+                    />
+                    <br />
+                    <button className="btn" type="submit">Save</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
