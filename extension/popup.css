@@ -379,6 +379,11 @@ input[type="password"] {
   width: 100%;
 }
 
+textarea {
+  display: block;
+  width: 100%;
+}
+
 input[type="file"] {
   display: block;
   width: 100%;

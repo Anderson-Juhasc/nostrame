@@ -111,7 +111,7 @@ function Popup() {
     setWallet({
       ...wallet,
       mnemonic: mnemonic
-    });
+    })
   }
 
   async function saveAccount(e) {
@@ -223,14 +223,14 @@ function Popup() {
           <div className="App">
             <form onSubmit={saveAccount}>
               <h1>Create new account</h1>
-              <input
-                type="text"
+              <textarea
+                rows="2"
                 placeholder="Mnemonic"
                 name="mnemonic"
                 required
                 value={wallet.mnemonic}
                 onChange={handleWalletChange}
-              />
+              ></textarea>
               <br />
               <input
                 type="text"
@@ -251,7 +251,7 @@ function Popup() {
               <br />
               <button type="submit" className="btn">Save</button>
               <br />
-              <button type="button" className="btn" onClick={() => setStep(1)}>Back</button>
+              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '' }) } }>Back</button>
             </form>
           </div>
         )
@@ -260,14 +260,14 @@ function Popup() {
           <div className="App">
             <form onSubmit={saveAccount}>
               <h1>Create new account</h1>
-              <input
-                type="text"
+              <textarea
+                rows="2"
                 placeholder="Mnemonic"
                 name="mnemonic"
-                readOnly
+                required
                 value={wallet.mnemonic}
                 onChange={handleWalletChange}
-              />
+              ></textarea>
               <br />
               <input
                 type="password"
@@ -288,7 +288,7 @@ function Popup() {
               <br />
               <button type="submit" className="btn">Save</button>
               <br />
-              <button type="button" className="btn" onClick={() => setStep(1)}>Back</button>
+              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '' }) } }>Back</button>
             </form>
           </div>
         )
