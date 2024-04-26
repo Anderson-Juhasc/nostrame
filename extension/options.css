@@ -1,3 +1,7 @@
+* {
+  font-family: monospace;
+}
+
 .container {
   margin: 0 auto;
   width: 600px;
