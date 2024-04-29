@@ -3,10 +3,12 @@
   "description": "Nostr Account Manager Extension",
   "version": "0.0.2",
   "manifest_version": 3,
+  "background": {
+    "service_worker": "background.build.js"
+  },
   "options_page": "options.html",
   "action": {
     "default_popup": "popup.html"
   },
-  "permissions": ["storage"],
-  "optional_permissions": ["notifications"]
+  "permissions": ["storage"]
 }

@@ -11,7 +11,7 @@ esbuild
       'popup.build': './extension/popup.jsx',
       //'prompt.build': './extension/prompt.jsx',
       'options.build': './extension/options.jsx',
-      //'background.build': './extension/background.js',
+      'background.build': './extension/background.js',
       //'content-script.build': './extension/content-script.js'
     },
     outdir: './extension',

@@ -10,6 +10,7 @@ function Options() {
   const [isLocked, setIsLocked] = useState(false)
   const [file, setFile] = useState(null)
   const [password, setPassword] = useState('')
+  const [relay, setRelay] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -25,10 +26,11 @@ function Options() {
   }, [])
 
   const fetchData = async () => {
-    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked'])
+    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked', 'defaultRelay'])
 
     setIsLocked(storage.isLocked)
     setIsAuthenticated(storage.isAuthenticated)
+    setRelay(storage.defaultRelay)
   }
 
   const handleFileChange = (e) => {
@@ -84,6 +86,13 @@ function Options() {
     }
   }
 
+  const handleChangeRelay = async () => {
+    await browser.storage.local.set({ 
+      defaultRelay: relay,
+    })
+    fetchData()
+  }
+
   return (
     <div className="container">
       <h1>Options</h1>
@@ -96,6 +105,17 @@ function Options() {
               <button type="button" onClick={handleWalletExport}>Export backup</button>
 
               <hr />
+
+              <form onSubmit={handleChangeRelay}>
+                <h2>Relay</h2>
+                <input 
+                  type="text"
+                  name="relay"
+                  value={relay}
+                  onChange={(e) => setRelay(e.target.value)}
+                />
+                <button type="submit" className="btn">Save</button>
+              </form>
             </>
           )}
 

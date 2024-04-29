@@ -1,12 +1,14 @@
 import browser from 'webextension-polyfill'
 import {render} from 'react-dom'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import CryptoJS from 'crypto-js'
 import { getPublicKey } from 'nostr-tools/pure'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
 import {hexToBytes, bytesToHex} from '@noble/hashes/utils'
 import { encrypt, decrypt } from './common'
+import { finalizeEvent } from 'nostr-tools/pure'
+import { Relay } from 'nostr-tools/relay'
 
 function Popup() {
   const [masterPassword, setMasterPassword] = useState('')
@@ -22,20 +24,53 @@ function Popup() {
     mnemonic: '',
     passphrase: '',
     accountIndex: 0,
-    accounts: [],
+    accounts: [], // maybe change to derivedAccounts
+    importedAccounts: [],
   })
   const [accounts, setAccounts] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [accountEditing, setAccountEditing] = useState({})
+  const [relay, setRelay] = useState(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(async () => {
     fetchData()
   }, []);
 
+  useMemo(async () => {
+    if (!accounts.length) return false
+    console.log(relay.connected)
+    if (!relay.connected) await relay.connect()
+    accounts.forEach((item) => {
+      const sub = relay.subscribe([
+        {
+          kinds: [0],
+          authors: [item.pubKey],
+        },
+      ], {
+        onevent(event) {
+          //console.log('got event:', event)
+          const content = JSON.parse(event.content)
+          item.name = content.name
+        },
+        oneose() {
+          setAccounts(accounts)
+          setWallet(prevWallet => ({
+            ...prevWallet,
+            accounts
+          }))
+          sub.close()
+        }
+      })
+    })
+  }, [accounts]);
+
   const fetchData = async () => {
     const storage = await browser.storage.local.get()
 
     console.log(storage)
+
+    setIsAuthenticated(storage.isAuthenticated)
 
     if (storage.isLocked) {
       setIsLocked(true)
@@ -53,7 +88,7 @@ function Popup() {
           ...loadAccounts, 
           { 
             index: i,
-            name: storage.wallet.accounts[i].name,
+            //name: storage.wallet.accounts[i].name,
             prvKey,
             nsec,
             pubKey,
@@ -62,9 +97,14 @@ function Popup() {
           }
         ]
       }
-      setIsAuthenticated(storage.isAuthenticated)
+
+      const relayConnection = await Relay.connect(storage.defaultRelay)
+      console.log(`connected to`, relayConnection.url)
+      setRelay(relayConnection)
+
       setWallet(storage.wallet)
       setAccounts(loadAccounts)
+      setLoaded(true)
     }
   }
 
@@ -93,6 +133,30 @@ function Popup() {
       wallet: walletData,
       encryptedWallet,
     })
+
+    relay.subscribe([
+      {
+        kinds: [0],
+        authors: [accountEditing.pubKey],
+      },
+    ], {
+      onevent(event) {
+        console.log('got event:', event)
+      }
+    })
+    
+    let eventTemplate = {
+      kind: 0,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [],
+      content: JSON.stringify({ name: accountEditing.name, displayName: accountEditing.name }),
+    }
+
+    // this assigns the pubkey, calculates the event id and signs the event in a single step
+    const signedEvent = finalizeEvent(eventTemplate, accountEditing.prvKey)
+    await relay.publish(signedEvent)
+
+    //relay.close()
 
     handleModalClose()
     fetchData()
@@ -245,6 +309,8 @@ function Popup() {
 
   const lockWallet = async () => {
     setIsLocked(true)
+    setAccounts([])
+    setLoaded(false)
     await browser.storage.local.set({ 
       isLocked: true,
       wallet: {
@@ -314,7 +380,7 @@ function Popup() {
               <br />
               <button type="submit" className="btn">Save</button>
               <br />
-              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '' }) } }>Back</button>
+              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
             </form>
           </div>
         )
@@ -351,7 +417,7 @@ function Popup() {
               <br />
               <button type="submit" className="btn">Save</button>
               <br />
-              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '' }) } }>Back</button>
+              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
             </form>
           </div>
         )
@@ -386,28 +452,34 @@ function Popup() {
           <div>
             <h2>Accounts</h2>
             <div>
-              {accounts.map((account, index) => (
-                <div key={index} className="break-string">
-                  <strong>{account.name}:</strong>
-                  &nbsp;
-                  <button onClick={() => toggleFormat(account)}>{account.format === 'bech32' ? 'hex' : 'bech32'}</button>
-                  &nbsp;
-                  <button type="button" onClick={() => { handleModalOpen(account) }}>Edit</button>
-                  <br />
-                  <strong>{account.format === 'bech32' ? 'nsec' : 'Private Key'}:</strong>
-                  &nbsp;
-                  {account.format === 'bech32' ? hideStringMiddle(account.nsec) : hideStringMiddle(account.prvKey)}
-                  &nbsp;
-                  <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.nsec : account.prvKey)}>Copy</button>
-                  <br />
-                  <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
-                  &nbsp;
-                  {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
-                  &nbsp;
-                  <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)}>Copy</button>
-                  <hr />
-                </div>
-              ))}
+              {loaded ? (
+                accounts.map((account, index) => (
+                  <div key={index} className="break-string">
+                    <strong>{account.name ? account.name : 'Account ' + index}:</strong>
+                    &nbsp;
+                    <button onClick={() => toggleFormat(account)}>{account.format === 'bech32' ? 'hex' : 'bech32'}</button>
+                    &nbsp;
+                    <button type="button" onClick={() => { handleModalOpen(account) }}>Edit</button>
+                    <br />
+                    <strong>{account.format === 'bech32' ? 'nsec' : 'Private Key'}:</strong>
+                    &nbsp;
+                    {account.format === 'bech32' ? hideStringMiddle(account.nsec) : hideStringMiddle(account.prvKey)}
+                    &nbsp;
+                    <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.nsec : account.prvKey)}>Copy</button>
+                    <br />
+                    <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
+                    &nbsp;
+                    {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
+                    &nbsp;
+                    <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)}>Copy</button>
+                    <hr />
+                  </div>
+                ))
+              ) : (
+                <>
+                  Loading...
+                </>
+              )}
             </div>
           </div>
 
