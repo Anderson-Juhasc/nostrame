@@ -77,6 +77,7 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
         <form onSubmit={saveAccount}>
           <input
             type="text"
+            autocomplete="off"
             placeholder="Name"
             name="name"
             value={account.name}
@@ -85,6 +86,7 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
           <br />
           <input
             type="text"
+            autocomplete="off"
             placeholder="About"
             name="about"
             value={account.about}
@@ -93,6 +95,7 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
           <br />
           <input
             type="text"
+            autocomplete="off"
             placeholder="Picture url"
             name="picture"
             value={account.picture}
@@ -101,6 +104,7 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
           <br />
           <input
             type="text"
+            autocomplete="off"
             placeholder="NIP05"
             name="nip05"
             value={account.nip05}
@@ -109,6 +113,7 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
           <br />
           <input
             type="text"
+            autocomplete="off"
             placeholder="LUD16"
             name="lud16"
             value={account.lud16}

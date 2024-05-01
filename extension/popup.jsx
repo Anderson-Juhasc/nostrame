@@ -9,6 +9,7 @@ import {hexToBytes, bytesToHex} from '@noble/hashes/utils'
 import { encrypt, decrypt } from './common'
 import SecretsModal from './components/SecretsModal'
 import EditAccountModal from './components/EditAccountModal'
+import ImportAccountModal from './components/ImportAccountModal'
 import { finalizeEvent } from 'nostr-tools/pure'
 import { Relay } from 'nostr-tools/relay'
 import { SimplePool } from 'nostr-tools/pool'
@@ -30,11 +31,13 @@ function Popup() {
   })
   const [encryptedWallet, setEncryptedWallet] = useState('')
   const [accounts, setAccounts] = useState([])
+  const [importedAccounts, setImportedAccounts] = useState([])
   const [accountEditing, setAccountEditing] = useState({})
   const [relay, setRelay] = useState(null)
   const [loaded, setLoaded] = useState(false)
   const [showSecretsModal, setShowSecretsModal] = useState(false)
   const [showEditAccountModal, setEditAccountModal] = useState(false)
+  const [showImportAccountModal, setShowImportAccountModal] = useState(false)
 
   const pool = new SimplePool()
 
@@ -44,6 +47,8 @@ function Popup() {
 
   const fetchData = async () => {
     const storage = await browser.storage.local.get()
+
+    console.log(storage)
 
     setIsAuthenticated(storage.isAuthenticated)
 
@@ -70,7 +75,31 @@ function Popup() {
             nsec,
             pubKey,
             npub,
-            format: 'bech32'
+            format: 'bech32',
+            type: 'derived',
+          }
+        ]
+      }
+
+      let len = storage.wallet.importedAccounts.length
+      for (let i = 0; i < len; i++) {
+        const prvKey = storage.wallet.importedAccounts[i].prvKey
+        const index = storage.wallet.importedAccounts[i].index
+        const nsec = nip19.nsecEncode(hexToBytes(prvKey))
+        const pubKey = getPublicKey(prvKey)
+        const npub = nip19.npubEncode(pubKey)
+        authors.push(pubKey)
+        loadAccounts = [
+          ...loadAccounts, 
+          { 
+            index,
+            name: '',
+            prvKey,
+            nsec,
+            pubKey,
+            npub,
+            format: 'bech32',
+            type: 'imported',
           }
         ]
       }
@@ -89,13 +118,17 @@ function Popup() {
             loadAccounts[i].name = content.display_name
             loadAccounts[i].about = content.about
             loadAccounts[i].picture = content.picture
-            loadAccounts[i].nip19 = content.nip19
+            loadAccounts[i].nip05 = content.nip05
             loadAccounts[i].lud16 = content.lud16
           }
         }
       })
 
-      setAccounts(loadAccounts)
+      const dAccounts = loadAccounts.filter(obj => obj.type === 'derived')
+      const iAccounts = loadAccounts.filter(obj => obj.type === 'imported')
+
+      setAccounts(dAccounts)
+      setImportedAccounts(iAccounts)
       setLoaded(true)
     }
   }
@@ -166,7 +199,8 @@ function Popup() {
       mnemonic: wallet.mnemonic,
       passphrase: wallet.passphrase,
       accountIndex: 0,
-      accounts: []
+      accounts: [],
+      importedAccounts: [],
     }
 
     const prvKey = privateKeyFromSeedWords(walletData.mnemonic, walletData.passphrase, walletData.accountIndex)
@@ -244,7 +278,12 @@ function Popup() {
     setLoaded(false)
     setEditAccountModal(false)
     fetchData()
-    //setTimeout(() => fetchData(), 2000)
+  }
+
+  const importAccountCallback = () => {
+    setLoaded(false)
+    setShowImportAccountModal(false)
+    fetchData()
   }
 
   if (!isAuthenticated) {
@@ -276,6 +315,7 @@ function Popup() {
               <br />
               <input
                 type="text"
+                autocomplete="off"
                 placeholder="Passphrase"
                 name="passphrase"
                 value={wallet.passphrase}
@@ -284,6 +324,7 @@ function Popup() {
               <br />
               <input
                 type="password"
+                autocomplete="off"
                 placeholder="Password"
                 name="password"
                 required
@@ -313,6 +354,7 @@ function Popup() {
               <br />
               <input
                 type="password"
+                autocomplete="off"
                 placeholder="Passphrase"
                 name="passphrase"
                 value={wallet.passphrase}
@@ -321,6 +363,7 @@ function Popup() {
               <br />
               <input
                 type="password"
+                autocomplete="off"
                 placeholder="Password"
                 name="password"
                 required
@@ -346,6 +389,7 @@ function Popup() {
           <br />
           <input
             type="password"
+            autocomplete="off"
             placeholder="Password"
             name="password"
             required
@@ -365,11 +409,38 @@ function Popup() {
               &nbsp;
               <button onClick={() => setShowSecretsModal(true)}>Show secrets</button>
               &nbsp;
+              <button onClick={() => setShowImportAccountModal(true)}>Import account</button>
+              &nbsp;
               <button type="button" onClick={openOptionsButton}>Options</button>
               <div>
                 <h2>Accounts</h2>
                 <div>
                   {accounts.map((account, index) => (
+                    <div key={index} className="break-string">
+                      <strong>{account.name ? account.name : 'Account ' + index}:</strong>
+                      &nbsp;
+                      <button onClick={() => toggleFormat(account)}>{account.format === 'bech32' ? 'hex' : 'bech32'}</button>
+                      &nbsp;
+                      <button type="button" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }}>Edit</button>
+                      <br />
+                      <strong>{account.format === 'bech32' ? 'nsec' : 'Private Key'}:</strong>
+                      &nbsp;
+                      {account.format === 'bech32' ? hideStringMiddle(account.nsec) : hideStringMiddle(account.prvKey)}
+                      &nbsp;
+                      <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.nsec : account.prvKey)}>Copy</button>
+                      <br />
+                      <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
+                      &nbsp;
+                      {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
+                      &nbsp;
+                      <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)}>Copy</button>
+                      <hr />
+                    </div>
+                  ))}
+                </div>
+                <h2>Imported accounts</h2>
+                <div>
+                  {importedAccounts.map((account, index) => (
                     <div key={index} className="break-string">
                       <strong>{account.name ? account.name : 'Account ' + index}:</strong>
                       &nbsp;
@@ -404,6 +475,12 @@ function Popup() {
             isOpen={showSecretsModal}
             onClose={() => setShowSecretsModal(false)}
           ></SecretsModal>
+
+          <ImportAccountModal 
+            isOpen={showImportAccountModal}
+            callBack={importAccountCallback}
+            onClose={() => setShowImportAccountModal(false)}
+          ></ImportAccountModal>
 
           <EditAccountModal 
             isOpen={showEditAccountModal}
