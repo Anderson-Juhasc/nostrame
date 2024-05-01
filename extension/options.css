@@ -2,7 +2,59 @@
   font-family: monospace;
 }
 
+/* Body */
+body {
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff;
+}
+
+/* Links */
+a {
+    color: #ff9900;
+}
+
+a:hover {
+    color: #ffcc00;
+}
+
+/* Text */
+p {
+    color: #ffffff;
+}
+
+/* Buttons */
+.button {
+    background-color: #444444;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+}
+
+.button:hover {
+    background-color: #555555;
+}
+
+/* Forms */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+    background-color: #333333;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+}
+
+/* Shadows */
+.shadow {
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.75);
+}
+
 .container {
   margin: 0 auto;
   width: 600px;
 }
+

@@ -11,26 +11,22 @@ function Options() {
   const [file, setFile] = useState(null)
   const [password, setPassword] = useState('')
   const [relay, setRelay] = useState('')
+  const [relays, setRelays] = useState([])
 
   useEffect(() => {
     fetchData()
 
     browser.storage.onChanged.addListener(function(changes, namespace) {
-      //for (let key in changes) {
-      //  if (key === 'isLocked') {
-          // Reload data
-          fetchData()
-      //  }
-      //}
+      fetchData()
     });
   }, [])
 
   const fetchData = async () => {
-    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked', 'defaultRelay'])
+    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked', 'defaultRelay', 'relays'])
 
     setIsLocked(storage.isLocked)
     setIsAuthenticated(storage.isAuthenticated)
-    setRelay(storage.defaultRelay)
+    setRelays(JSON.parse(storage.relays))
   }
 
   const handleFileChange = (e) => {
@@ -86,11 +82,26 @@ function Options() {
     }
   }
 
-  const handleChangeRelay = async () => {
+  const addNewRelay = async (e) => {
+    e.preventDefault()
+
+    relays.push(relay)
+    setRelays(relays)
+    setRelay('')
     await browser.storage.local.set({ 
-      defaultRelay: relay,
+      relays: JSON.stringify(relays),
     })
-    fetchData()
+  }
+
+  const removeRelay = async (index) => {
+    const newRelays = [...relays]
+    if (index !== -1) {
+      newRelays.splice(index, 1)
+      setRelays(newRelays)
+    }
+    await browser.storage.local.set({ 
+      relays: JSON.stringify(newRelays),
+    })
   }
 
   return (
@@ -106,16 +117,28 @@ function Options() {
 
               <hr />
 
-              <form onSubmit={handleChangeRelay}>
-                <h2>Relay</h2>
+              <form onSubmit={addNewRelay}>
+                <h2>Relays</h2>
                 <input 
                   type="text"
                   name="relay"
                   value={relay}
+                  required
+                  pattern="^wss:\/\/([a-zA-Z0-9\-\.]+)(:[0-9]+)?(\/[a-zA-Z0-9\-\.\/\?\:@&=%\+\/~#]*)?$"
                   onChange={(e) => setRelay(e.target.value)}
                 />
-                <button type="submit" className="btn">Save</button>
+                <button type="submit" className="btn">Add</button>
               </form>
+
+              <ul>
+                {relays.map((relay, index) => (
+                  <li key={index}>
+                    {relay}
+                    &nbsp;
+                    <button type="button" onClick={() => removeRelay(index)}>&times;</button>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
 
