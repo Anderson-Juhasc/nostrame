@@ -60,7 +60,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           <br />
           <input
             type="text"
-            autocomplete="off"
+            autoComplete="off"
             placeholder="nsec"
             name="prvKey"
             required

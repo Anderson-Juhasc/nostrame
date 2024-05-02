@@ -41,7 +41,7 @@ const SecretsModal = ({ isOpen, onClose }) => {
             <br />
             <input
               type="password"
-              autocomplete="off"
+              autoComplete="off"
               placeholder="Password"
               name="password"
               required

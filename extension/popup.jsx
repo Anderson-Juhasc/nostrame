@@ -176,10 +176,19 @@ function Popup() {
 
   async function toggleFormat(account) {
     let newFormat = account.format === 'bech32' ? 'hex' : 'bech32'
-    setAccounts((prevAccounts) => {
+
+    if (account.type === 'derived') {
+      setAccounts((prevAccounts) => {
+        prevAccounts[account.index]['format'] = newFormat
+        return [...prevAccounts]
+      })
+      return
+    }
+
+    setImportedAccounts((prevAccounts) => {
       prevAccounts[account.index]['format'] = newFormat
       return [...prevAccounts]
-    });
+    })
   }
 
   async function createNewAccount(e) {
@@ -315,7 +324,7 @@ function Popup() {
               <br />
               <input
                 type="text"
-                autocomplete="off"
+                autoComplete="off"
                 placeholder="Passphrase"
                 name="passphrase"
                 value={wallet.passphrase}
@@ -324,7 +333,7 @@ function Popup() {
               <br />
               <input
                 type="password"
-                autocomplete="off"
+                autoComplete="off"
                 placeholder="Password"
                 name="password"
                 required
@@ -354,7 +363,7 @@ function Popup() {
               <br />
               <input
                 type="password"
-                autocomplete="off"
+                autoComplete="off"
                 placeholder="Passphrase"
                 name="passphrase"
                 value={wallet.passphrase}
@@ -363,7 +372,7 @@ function Popup() {
               <br />
               <input
                 type="password"
-                autocomplete="off"
+                autoComplete="off"
                 placeholder="Password"
                 name="password"
                 required
@@ -389,7 +398,7 @@ function Popup() {
           <br />
           <input
             type="password"
-            autocomplete="off"
+            autoComplete="off"
             placeholder="Password"
             name="password"
             required
