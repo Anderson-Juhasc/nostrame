@@ -85,6 +85,13 @@ function Options() {
   const addNewRelay = async (e) => {
     e.preventDefault()
 
+    const relayExist = relays.find(item => item === relay)
+    if (relayExist) {
+      alert('Please provide a not existing relay')
+      setRelay('')
+      return false
+    }
+
     relays.push(relay)
     setRelays(relays)
     setRelay('')
