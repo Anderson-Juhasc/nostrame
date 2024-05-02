@@ -26,7 +26,7 @@ function Options() {
 
     setIsLocked(storage.isLocked)
     setIsAuthenticated(storage.isAuthenticated)
-    setRelays(JSON.parse(storage.relays))
+    setRelays(storage.relays)
   }
 
   const handleFileChange = (e) => {
@@ -89,7 +89,7 @@ function Options() {
     setRelays(relays)
     setRelay('')
     await browser.storage.local.set({ 
-      relays: JSON.stringify(relays),
+      relays: relays,
     })
   }
 
@@ -100,7 +100,7 @@ function Options() {
       setRelays(newRelays)
     }
     await browser.storage.local.set({ 
-      relays: JSON.stringify(newRelays),
+      relays: newRelays,
     })
   }
 

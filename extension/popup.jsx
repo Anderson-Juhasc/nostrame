@@ -107,7 +107,7 @@ function Popup() {
       setWallet(storage.wallet)
       setEncryptedWallet(storage.encryptedWallet)
 
-      let relays = JSON.parse(storage.relays)
+      let relays = storage.relays
       let events = await pool.querySync(relays, { kinds: [0], authors })
 
       events.forEach((item) => {

@@ -48,7 +48,7 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
     e.preventDefault()
     const storage = await browser.storage.local.get(['relays'])
 
-    let relays = JSON.parse(storage.relays)
+    let relays = storage.relays
 
     let event = {
       kind: 0,
