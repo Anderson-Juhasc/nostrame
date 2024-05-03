@@ -2,8 +2,6 @@
 
 ### Nostr Account Manager Extension
 
-It implements [NIP-06](https://github.com/nostr-protocol/nips/blob/master/06.md)
-
 This extension is Chromium-only..
 
 ## Develop
