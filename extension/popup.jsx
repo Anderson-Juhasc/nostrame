@@ -10,6 +10,7 @@ import { encrypt, decrypt } from './common'
 import SecretsModal from './components/SecretsModal'
 import EditAccountModal from './components/EditAccountModal'
 import ImportAccountModal from './components/ImportAccountModal'
+import QRCodeModal from './components/QRCodeModal'
 import { finalizeEvent } from 'nostr-tools/pure'
 import { Relay } from 'nostr-tools/relay'
 import { SimplePool } from 'nostr-tools/pool'
@@ -38,6 +39,8 @@ function Popup() {
   const [showSecretsModal, setShowSecretsModal] = useState(false)
   const [showEditAccountModal, setEditAccountModal] = useState(false)
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
+  const [qrCodeKey, setQRCodeKey] = useState('')
+  const [qrCodeModal, setQRCodeModal] = useState(false)
 
   const pool = new SimplePool()
 
@@ -437,12 +440,14 @@ function Popup() {
                       {account.format === 'bech32' ? hideStringMiddle(account.nsec) : hideStringMiddle(account.prvKey)}
                       &nbsp;
                       <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.nsec : account.prvKey)}>Copy</button>
+                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }}>QR</button>
                       <br />
                       <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
                       &nbsp;
                       {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
                       &nbsp;
                       <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)}>Copy</button>
+                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }}>QR</button>
                       <hr />
                     </div>
                   ))}
@@ -462,12 +467,14 @@ function Popup() {
                       {account.format === 'bech32' ? hideStringMiddle(account.nsec) : hideStringMiddle(account.prvKey)}
                       &nbsp;
                       <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.nsec : account.prvKey)}>Copy</button>
+                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }}>QR</button>
                       <br />
                       <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
                       &nbsp;
                       {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
                       &nbsp;
                       <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)}>Copy</button>
+                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }}>QR</button>
                       <hr />
                     </div>
                   ))}
@@ -479,6 +486,12 @@ function Popup() {
               Loading...
             </>
           )}
+
+          <QRCodeModal 
+            isOpen={qrCodeModal}
+            keyValue={qrCodeKey}
+            onClose={() => setQRCodeModal(false)}
+          ></QRCodeModal>
 
           <SecretsModal 
             isOpen={showSecretsModal}
