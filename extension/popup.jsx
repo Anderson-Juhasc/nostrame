@@ -298,6 +298,20 @@ function Popup() {
     fetchData()
   }
 
+  const deleteImportedAccount = async (index) => {
+    if (await confirm("Are you sure you want to delete this account? Make sure if you have made a backup before you continue.")) {
+      const newImportedAccounts = [...importedAccounts]
+      if (index !== -1) {
+        newImportedAccounts.splice(index, 1)
+        setImportedAccounts(newImportedAccounts)
+      }
+      wallet.importedAccounts = newImportedAccounts
+      await browser.storage.local.set({ 
+        wallet,
+      })
+    }
+  }
+
   if (!isAuthenticated) {
     switch (step) {
       case 1: 
@@ -461,6 +475,8 @@ function Popup() {
                       <button onClick={() => toggleFormat(account)}>{account.format === 'bech32' ? 'hex' : 'bech32'}</button>
                       &nbsp;
                       <button type="button" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }}>Edit</button>
+                      &nbsp;
+                      <button type="button" onClick={() => { deleteImportedAccount(index) }}>Delete</button>
                       <br />
                       <strong>{account.format === 'bech32' ? 'nsec' : 'Private Key'}:</strong>
                       &nbsp;
