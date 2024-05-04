@@ -440,7 +440,7 @@ function Popup() {
               &nbsp;
               <button type="button" onClick={openOptionsButton}>Options</button>
               <div>
-                <h2>Accounts</h2>
+                <h2>Derived accounts</h2>
                 <div>
                   {accounts.map((account, index) => (
                     <div key={index} className="break-string">
