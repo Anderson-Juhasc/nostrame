@@ -62,7 +62,7 @@ function Popup() {
     let loadAccounts = []
     let authors = []
 
-    if (storage.isAuthenticated) {
+    if (storage.isAuthenticated && !storage.isLocked) {
       let l = storage.wallet.accounts.length
       for (let i = 0; i < l; i++) {
         const prvKey = storage.wallet.accounts[i].prvKey
