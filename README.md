@@ -2,7 +2,8 @@
 
 Nostrame is a comprehensive account management solution designed to streamline your digital accounts handling. With its robust features, you can effortlessly generate accounts using a mnemonic and passphrase, import external accounts in hex and bech32 formats, and conveniently access and modify kind 0 data. What sets Nostrame apart is its advanced encryption capabilities, allowing you to safeguard your mnemonic with ease. Additionally, it have backup encrypted processes by enabling import and export functionalities using a master password.
 
-![Nostrame Popup](popup-screenshot.png)
+<img src="popup-screenshot.png" alt="Nostrame Popup" style="width:357px;height:600px;">
+
 ![Nostrame Options Page](options-page-screenshot.png)
 
 This extension is Chromium-only.
