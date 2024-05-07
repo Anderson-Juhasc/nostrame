@@ -2,7 +2,6 @@ import browser from 'webextension-polyfill'
 import {render} from 'react-dom'
 import React, { useState, useEffect } from 'react'
 import CryptoJS from 'crypto-js'
-import { getPublicKey } from 'nostr-tools/pure'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
 import {hexToBytes, bytesToHex} from '@noble/hashes/utils'
@@ -11,7 +10,7 @@ import SecretsModal from './components/SecretsModal'
 import EditAccountModal from './components/EditAccountModal'
 import ImportAccountModal from './components/ImportAccountModal'
 import QRCodeModal from './components/QRCodeModal'
-import { finalizeEvent } from 'nostr-tools/pure'
+import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { Relay } from 'nostr-tools/relay'
 import { SimplePool } from 'nostr-tools/pool'
 
@@ -260,6 +259,21 @@ function Popup() {
     fetchData()
   }
 
+  const generateRandomAccount = async () => {
+    const storage = await browser.storage.local.get(['wallet', 'password'])
+    const wallet = storage.wallet
+    const prvKeyHex = bytesToHex(generateSecretKey())
+    const len = wallet.importedAccounts.length
+    wallet.importedAccounts.push({ index: len, prvKey: prvKeyHex })
+    const encryptedWallet = encrypt(wallet, storage.password)
+    await browser.storage.local.set({ 
+      wallet,
+      encryptedWallet,
+    })
+    setLoaded(false)
+    fetchData()
+  }
+
   const lockWallet = async () => {
     setIsLocked(true)
     setAccounts([])
@@ -468,6 +482,9 @@ function Popup() {
                   ))}
                 </div>
                 <h2>Imported accounts</h2>
+                <button type="button" onClick={generateRandomAccount}>Generate random account</button>
+                <br />
+                <br />
                 <div>
                   {importedAccounts.map((account, index) => (
                     <div key={index} className="break-string">
