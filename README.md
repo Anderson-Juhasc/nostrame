@@ -4,7 +4,7 @@ Nostrame is a comprehensive account management solution designed to streamline y
 
 <img src="popup-screenshot.png" alt="Nostrame Popup" style="width:357px;height:600px;">
 
-<img src="popup-screenshot.png" alt="Nostrame Options Page" style="width:1286px;">
+<img src="options-page-screenshot.png" alt="Nostrame Options Page" style="width:1286px;">
 
 This extension is Chromium-only.
 
