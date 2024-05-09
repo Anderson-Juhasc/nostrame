@@ -355,17 +355,83 @@ template {
   display: none;
 }
 
+button {
+  background-color: #9b59b6; /* Purple color */
+  color: #fff; /* White text */
+  padding: 5px 10px; /* Padding */
+  border: none; /* No border */
+  border-radius: 5px; /* Rounded corners */
+  cursor: pointer; /* Cursor style */
+  text-align: center; /* Center text */
+  text-decoration: none; /* Remove underline */
+  display: inline-block; /* Make it inline block */
+  transition: background-color 0.3s ease; /* Smooth transition */
+}
+
+button:hover {
+  background-color: #c39bd3; /* Lighter shade of purple on hover */
+}
+
+
+a {
+  color: #7d7d7d;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #cdcdcd;
+}
 
 /* Set default font family and size */
 body {
+  background-color: #000;
+  color: #fff;
   font-family: Arial, sans-serif;
   font-size: 16px;
-  height: 600px;
-  width: 357px;
 }
 
-.App {
+.header {
+  background-color: #333;
+  color: #fff;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.header > h1 {
+  color: #9b59b6;
+  margin: 0;
+}
+
+.Popup {
+}
+
+.Popup .container {
+  margin: 0 15px;
+}
+
+.Options .container {
+  margin: 0 auto;
+  width: 600px;
+}
+
+
+.card {
+  background: #111;
+  border-bottom: 1px solid #222;
   padding: 15px;
+}
+
+.card:first-child {
+  border-top: 1px solid #222;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
 }
 
 .break-string {
@@ -408,11 +474,13 @@ label {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 2;
 }
 
 .modal {
-  background-color: #fff;
-  padding: 20px;
+  background-color: #222;
+  color: #fff;
+  padding: 15px;
   border-radius: 8px;
   margin: 0 15px;
   width: 100%;
@@ -429,3 +497,38 @@ label {
   cursor: pointer;
 }
 
+/* Style the dropdown button */
+.dropdown {
+  display: flex;
+  position: relative;
+  display: inline-block;
+}
+
+/* Style the dropdown content (hidden by default) */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: #f9f9f9;
+  min-width: 200px;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+/* Style the links inside the dropdown */
+.dropdown-content a {
+  color: black;
+  padding: 10px 15px;
+  text-decoration: none;
+  display: block;
+}
+
+/* Change color of dropdown links on hover */
+.dropdown-content a:hover {
+  background-color: #ddd;
+}
+
+/* Show the dropdown menu on hover */
+.dropdown:hover .dropdown-content {
+  display: block;
+}

@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 import CryptoJS from 'crypto-js'
 import {render} from 'react-dom'
+import SecretsModal from './components/SecretsModal'
 import React, { useState, useEffect } from 'react'
 
 import { encrypt, decrypt } from './common'
@@ -12,6 +13,7 @@ function Options() {
   const [password, setPassword] = useState('')
   const [relay, setRelay] = useState('')
   const [relays, setRelays] = useState([])
+  const [showSecretsModal, setShowSecretsModal] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -112,76 +114,88 @@ function Options() {
   }
 
   return (
-    <div className="container">
-      <h1>Options</h1>
+    <div className="Options">
+      <div className="container">
+        <h1>Options</h1>
 
-      {!isLocked ? (
-        <>
-          { isAuthenticated && (
-            <>
-              <h2>Export backup</h2>
-              <button type="button" onClick={handleWalletExport}>Export backup</button>
+        {!isLocked ? (
+          <>
+            { isAuthenticated && (
+              <>
+                <h2>Export backup</h2>
+                <button type="button" onClick={handleWalletExport}>Export backup</button>
 
-              <hr />
+                <hr />
 
-              <form onSubmit={addNewRelay}>
-                <h2>Relays</h2>
-                <input 
-                  type="text"
-                  name="relay"
-                  value={relay}
-                  required
-                  pattern="^wss:\/\/([a-zA-Z0-9\-\.]+)(:[0-9]+)?(\/[a-zA-Z0-9\-\.\/\?\:@&=%\+\/~#]*)?$"
-                  onChange={(e) => setRelay(e.target.value)}
-                />
-                <button type="submit" className="btn">Add</button>
-              </form>
+                <h2>Security</h2>
+                <button onClick={() => setShowSecretsModal(true)}>Show secrets</button>
 
-              <ul>
-                {relays.map((relay, index) => (
-                  <li key={index}>
-                    {relay}
-                    &nbsp;
-                    <button type="button" onClick={() => removeRelay(index)}>&times;</button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+                <SecretsModal 
+                  isOpen={showSecretsModal}
+                  onClose={() => setShowSecretsModal(false)}
+                ></SecretsModal>
 
-          { !isAuthenticated && (
-            <>
-              <h2>Import backup</h2>
+                <hr />
 
-              <form onSubmit={handleWalletImport}>
-                <input type="file" required onChange={handleFileChange} />
-                <br />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  name="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <br />
-                <button type="submit" className="btn">Import backup</button>
-              </form>
-              <hr />
-            </>
-          )}
+                <form onSubmit={addNewRelay}>
+                  <h2>Relays</h2>
+                  <input 
+                    type="text"
+                    name="relay"
+                    value={relay}
+                    required
+                    pattern="^wss:\/\/([a-zA-Z0-9\-\.]+)(:[0-9]+)?(\/[a-zA-Z0-9\-\.\/\?\:@&=%\+\/~#]*)?$"
+                    onChange={(e) => setRelay(e.target.value)}
+                  />
+                  <button type="submit" className="btn">Add</button>
+                </form>
 
-          { isAuthenticated && (
-            <>
-              <h2>Reset Wallet</h2>
+                <ul>
+                  {relays.map((relay, index) => (
+                    <li key={index}>
+                      {relay}
+                      &nbsp;
+                      <button type="button" onClick={() => removeRelay(index)}>&times;</button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
-              <button type="button" onClick={handleResetWallet}>Reset Wallet</button>
-            </>
-          )}
-        </>
-      ) : (
-        <h2>Wallet is locked</h2>
-      )}
+            { !isAuthenticated && (
+              <>
+                <h2>Import backup</h2>
+
+                <form onSubmit={handleWalletImport}>
+                  <input type="file" required onChange={handleFileChange} />
+                  <br />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    name="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <br />
+                  <button type="submit" className="btn">Import backup</button>
+                </form>
+                <hr />
+              </>
+            )}
+
+            { isAuthenticated && (
+              <>
+                <h2>Reset Wallet</h2>
+
+                <button type="button" onClick={handleResetWallet}>Reset Wallet</button>
+              </>
+            )}
+          </>
+        ) : (
+          <h2>Wallet is locked</h2>
+        )}
+      </div>
     </div>
   )
 

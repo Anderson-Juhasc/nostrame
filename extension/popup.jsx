@@ -6,7 +6,6 @@ import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
 import {hexToBytes, bytesToHex} from '@noble/hashes/utils'
 import { encrypt, decrypt } from './common'
-import SecretsModal from './components/SecretsModal'
 import EditAccountModal from './components/EditAccountModal'
 import ImportAccountModal from './components/ImportAccountModal'
 import QRCodeModal from './components/QRCodeModal'
@@ -35,7 +34,6 @@ function Popup() {
   const [accountEditing, setAccountEditing] = useState({})
   const [relay, setRelay] = useState(null)
   const [loaded, setLoaded] = useState(false)
-  const [showSecretsModal, setShowSecretsModal] = useState(false)
   const [showEditAccountModal, setEditAccountModal] = useState(false)
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
   const [qrCodeKey, setQRCodeKey] = useState('')
@@ -331,7 +329,7 @@ function Popup() {
     switch (step) {
       case 1: 
         return (
-          <div className="App">
+          <div className="Popup">
             <h1>Nostrame</h1>
             <button type="button" className="btn" onClick={() => setStep(2)}>I have an account</button>
             <br />
@@ -342,7 +340,7 @@ function Popup() {
         )
       case 2: 
         return (
-          <div className="App">
+          <div className="Popup">
             <form onSubmit={saveAccount}>
               <h1>Create new account</h1>
               <textarea
@@ -381,7 +379,7 @@ function Popup() {
         )
       case 3: 
         return (
-          <div className="App">
+          <div className="Popup">
             <form onSubmit={saveAccount}>
               <h1>Create new account</h1>
               <textarea
@@ -422,94 +420,166 @@ function Popup() {
   }
 
   return (
-    <div className="App container">
-      <h1>Nostrame</h1>
+    <div className="Popup container">
       {isLocked ? (
-        <form onSubmit={unlockWallet}>
-          <label>Wallet is locked</label>
-          <br />
-          <input
-            type="password"
-            autoComplete="off"
-            placeholder="Password"
-            name="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <br />
-          <button type="submit" className="btn">Unlock now</button>
-        </form>
+        <>
+          <div className="header">
+            <h1>Nostrame</h1>
+          </div>
+
+          <div className="container">
+            <br />
+            <form onSubmit={unlockWallet}>
+              <label>Wallet is locked</label>
+              <br />
+              <input
+                type="password"
+                autoComplete="off"
+                placeholder="Password"
+                name="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <br />
+              <button type="submit" className="btn">
+                <i className="icon-unlocked"></i>
+                &nbsp;
+                Unlock now
+              </button>
+            </form>
+          </div>
+        </>
       ) : (
         <>
           {loaded ? (
             <>
-              <button type="button" onClick={deriveNewAccount}>Derive new account</button>
-              &nbsp;
-              <button type="button" onClick={lockWallet}>Lock now</button>
-              &nbsp;
-              <button onClick={() => setShowSecretsModal(true)}>Show secrets</button>
-              &nbsp;
-              <button onClick={() => setShowImportAccountModal(true)}>Import account</button>
-              &nbsp;
-              <button type="button" onClick={openOptionsButton}>Options</button>
+              <div className="header">
+                <h1>
+                  Nostrame
+                </h1>
+
+                <div>
+                  <a href="#" onClick={lockWallet} title="Lock now">
+                    <i className="icon-lock"></i>
+                  </a>
+                  &nbsp;
+                  <a href="#" onClick={generateRandomAccount} title="Generate random account">
+                    <i className="icon-loop2"></i>
+                  </a>
+                  &nbsp;
+                  <a href="#" onClick={openOptionsButton} title="Options">
+                    <i className="icon-cog"></i>
+                  </a>
+                </div>
+              </div>
               <div>
-                <h2>Derived accounts</h2>
+                <div className="container">
+                  <div className="card-head">
+                    <h3>
+                      Derived accounts
+                    </h3>
+
+                    <div>
+                      <button type="button" onClick={deriveNewAccount} title="Derive new account">
+                        <strong>+</strong>
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <div>
                   {accounts.map((account, index) => (
-                    <div key={index} className="break-string">
-                      <strong>{account.name ? account.name : 'Account ' + index}:</strong>
-                      &nbsp;
-                      <button onClick={() => toggleFormat(account)}>{account.format === 'bech32' ? 'hex' : 'bech32'}</button>
-                      &nbsp;
-                      <button type="button" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }}>Edit</button>
-                      <br />
-                      <strong>{account.format === 'bech32' ? 'nsec' : 'Private Key'}:</strong>
-                      &nbsp;
-                      {account.format === 'bech32' ? hideStringMiddle(account.nsec) : hideStringMiddle(account.prvKey)}
-                      &nbsp;
-                      <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.nsec : account.prvKey)}>Copy</button>
-                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }}>QR</button>
-                      <br />
+                    <div key={index} className="card">
+                      <header className="card-head">
+                        <div className="title">
+                          <strong>{account.name ? account.name : 'Account ' + index}:</strong>
+                          &nbsp;
+                          <a href="#" onClick={() => toggleFormat(account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+                            <i className="icon-tab"></i>
+                          </a>
+                          &nbsp;
+                        </div>
+                        <div className="dropdown">
+                          <a href="#" className="dropbtn">
+                            <i className="icon-dots-three-vertical"></i>
+                          </a>
+                          <div className="dropdown-content">
+                            <a href="#" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }}>
+                              <i className="icon-pencil"></i> Edit
+                            </a>
+                            <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }} title="QRCode">
+                              <i className="icon-qrcode"></i> Account details
+                            </a>
+                          </div>
+                        </div>
+                      </header>
                       <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
                       &nbsp;
                       {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
                       &nbsp;
-                      <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)}>Copy</button>
-                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }}>QR</button>
-                      <hr />
+                      <a href="#" onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
+                        <i className="icon-copy"></i>
+                      </a>
+                      &nbsp;
+                      <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }} title="QRCode">
+                        <i className="icon-qrcode"></i>
+                      </a>
                     </div>
                   ))}
                 </div>
-                <h2>Imported accounts</h2>
-                <button type="button" onClick={generateRandomAccount}>Generate random account</button>
-                <br />
-                <br />
+                <div className="container">
+                  <div className="card-head">
+                    <h3>
+                      Imported accounts
+                    </h3>
+
+                    <div>
+                      <button type="button" onClick={() => setShowImportAccountModal(true)} title="Import account">
+                        <i className="icon-download"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <div>
                   {importedAccounts.map((account, index) => (
-                    <div key={index} className="break-string">
-                      <strong>{account.name ? account.name : 'Account ' + index}:</strong>
-                      &nbsp;
-                      <button onClick={() => toggleFormat(account)}>{account.format === 'bech32' ? 'hex' : 'bech32'}</button>
-                      &nbsp;
-                      <button type="button" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }}>Edit</button>
-                      &nbsp;
-                      <button type="button" onClick={() => { deleteImportedAccount(index) }}>Delete</button>
-                      <br />
-                      <strong>{account.format === 'bech32' ? 'nsec' : 'Private Key'}:</strong>
-                      &nbsp;
-                      {account.format === 'bech32' ? hideStringMiddle(account.nsec) : hideStringMiddle(account.prvKey)}
-                      &nbsp;
-                      <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.nsec : account.prvKey)}>Copy</button>
-                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }}>QR</button>
-                      <br />
+                    <div key={index} className="card">
+                      <header className="card-head">
+                        <div className="card-title">
+                          <strong>{account.name ? account.name : 'Account ' + index}:</strong>
+                          &nbsp;
+                          <a href="#" onClick={() => toggleFormat(account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+                            <i className="icon-tab"></i>
+                          </a>
+                          &nbsp;
+                        </div>
+                        <div className="dropdown">
+                          <a href="#" className="dropbtn">
+                            <i className="icon-dots-three-vertical"></i>
+                          </a>
+                          <div className="dropdown-content">
+                            <a href="#" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }} title="Edit">
+                              <i className="icon-pencil"></i> Edit
+                            </a>
+                            <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }} title="Account details">
+                              <i className="icon-qrcode"></i> Account details
+                            </a>
+                            <a href="#" onClick={() => { deleteImportedAccount(index) }} title="Remove account">
+                              <i className="icon-bin"></i> Remove account
+                            </a>
+                          </div>
+                        </div>
+                      </header>
                       <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
                       &nbsp;
                       {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
                       &nbsp;
-                      <button onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)}>Copy</button>
-                      <button onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }}>QR</button>
-                      <hr />
+                      <a href="#" onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
+                        <i className="icon-copy"></i>
+                      </a>
+                      &nbsp;
+                      <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }} title="QRCode">
+                        <i className="icon-qrcode"></i>
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -526,11 +596,6 @@ function Popup() {
             keyValue={qrCodeKey}
             onClose={() => setQRCodeModal(false)}
           ></QRCodeModal>
-
-          <SecretsModal 
-            isOpen={showSecretsModal}
-            onClose={() => setShowSecretsModal(false)}
-          ></SecretsModal>
 
           <ImportAccountModal 
             isOpen={showImportAccountModal}
