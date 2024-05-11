@@ -9,6 +9,7 @@ import { encrypt, decrypt } from './common'
 import EditAccountModal from './components/EditAccountModal'
 import ImportAccountModal from './components/ImportAccountModal'
 import QRCodeModal from './components/QRCodeModal'
+import AccountDetailsModal from './components/AccountDetailsModal'
 import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { Relay } from 'nostr-tools/relay'
 import { SimplePool } from 'nostr-tools/pool'
@@ -17,7 +18,6 @@ function Popup() {
   const [masterPassword, setMasterPassword] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
   const [password, setPassword] = useState('')
   const [step, setStep] = useState(1)
   const [file, setFile] = useState(null)
@@ -38,6 +38,8 @@ function Popup() {
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
   const [qrCodeKey, setQRCodeKey] = useState('')
   const [qrCodeModal, setQRCodeModal] = useState(false)
+  const [accountDetails, setAccountDetails] = useState('')
+  const [showAccountDetails, setShowAccountDetails] = useState(false)
 
   const pool = new SimplePool()
 
@@ -93,7 +95,7 @@ function Popup() {
         loadAccounts = [
           ...loadAccounts, 
           { 
-            index,
+            index: i,
             name: '',
             prvKey,
             nsec,
@@ -148,16 +150,10 @@ function Popup() {
     return result;
   }
 
-  const copyToClipboard = (text) => {
+  const copyToClipboard = (e, text) => {
+    e.preventDefault()
     navigator.clipboard.writeText(text)
-      .then(() => {
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000); // Reset copied state after 2 seconds
-      })
-      .catch((error) => {
-        console.error('Failed to copy to clipboard:', error);
-      });
-  };
+  }
   
   const handleWalletChange = (e) => {
     const { name, value } = e.target;
@@ -175,7 +171,8 @@ function Popup() {
     }));
   };
 
-  async function toggleFormat(account) {
+  async function toggleFormat(e, account) {
+    e.preventDefault()
     let newFormat = account.format === 'bech32' ? 'hex' : 'bech32'
 
     if (account.type === 'derived') {
@@ -183,7 +180,7 @@ function Popup() {
         prevAccounts[account.index]['format'] = newFormat
         return [...prevAccounts]
       })
-      return
+      return false
     }
 
     setImportedAccounts((prevAccounts) => {
@@ -494,35 +491,35 @@ function Popup() {
                         <div className="title">
                           <strong>{account.name ? account.name : 'Account ' + index}:</strong>
                           &nbsp;
-                          <a href="#" onClick={() => toggleFormat(account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+                          <a href="#" onClick={(e) => toggleFormat(e, account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
                             <i className="icon-tab"></i>
                           </a>
                           &nbsp;
                         </div>
                         <div className="dropdown">
-                          <a href="#" className="dropbtn">
+                          <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-btn">
                             <i className="icon-dots-three-vertical"></i>
                           </a>
                           <div className="dropdown-content">
                             <a href="#" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }}>
                               <i className="icon-pencil"></i> Edit
                             </a>
-                            <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }} title="QRCode">
+                            <a 
+                              href="#"
+                              onClick={() => { setAccountDetails(account); setShowAccountDetails(true) }}
+                              title="Account details"
+                            >
                               <i className="icon-qrcode"></i> Account details
                             </a>
                           </div>
                         </div>
                       </header>
-                      <strong>{account.format === 'bech32' ? 'npub' : 'Public Key'}:</strong>
+                      <strong>{account.format === 'bech32' ? 'Npub' : 'Public Key'}:</strong>
                       &nbsp;
                       {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
                       &nbsp;
-                      <a href="#" onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
+                      <a href="" onClick={(e) => copyToClipboard(e, account.format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
                         <i className="icon-copy"></i>
-                      </a>
-                      &nbsp;
-                      <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }} title="QRCode">
-                        <i className="icon-qrcode"></i>
                       </a>
                     </div>
                   ))}
@@ -547,20 +544,24 @@ function Popup() {
                         <div className="card-title">
                           <strong>{account.name ? account.name : 'Account ' + index}:</strong>
                           &nbsp;
-                          <a href="#" onClick={() => toggleFormat(account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+                          <a href="#" onClick={(e) => toggleFormat(e, account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
                             <i className="icon-tab"></i>
                           </a>
                           &nbsp;
                         </div>
                         <div className="dropdown">
-                          <a href="#" className="dropbtn">
+                          <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-btn">
                             <i className="icon-dots-three-vertical"></i>
                           </a>
                           <div className="dropdown-content">
                             <a href="#" onClick={() => { setEditAccountModal(true); setAccountEditing(account) }} title="Edit">
                               <i className="icon-pencil"></i> Edit
                             </a>
-                            <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.nsec : account.prvKey); setQRCodeModal(true) }} title="Account details">
+                            <a 
+                              href="#"
+                              onClick={() => { setAccountDetails(account); setShowAccountDetails(true) }}
+                              title="Account details"
+                            >
                               <i className="icon-qrcode"></i> Account details
                             </a>
                             <a href="#" onClick={() => { deleteImportedAccount(index) }} title="Remove account">
@@ -573,12 +574,8 @@ function Popup() {
                       &nbsp;
                       {account.format === 'bech32' ? hideStringMiddle(account.npub) : hideStringMiddle(account.pubKey)}
                       &nbsp;
-                      <a href="#" onClick={() => copyToClipboard(account.format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
+                      <a href="#" onClick={(e) => copyToClipboard(e, account.format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
                         <i className="icon-copy"></i>
-                      </a>
-                      &nbsp;
-                      <a href="#" onClick={() => { setQRCodeKey(account.format === 'bech32' ? account.npub : account.pubKey); setQRCodeModal(true) }} title="QRCode">
-                        <i className="icon-qrcode"></i>
                       </a>
                     </div>
                   ))}
@@ -609,6 +606,12 @@ function Popup() {
             callBack={editAccountCallback}
             onClose={() => setEditAccountModal(false)}
           ></EditAccountModal>
+
+          <AccountDetailsModal 
+            isOpen={showAccountDetails}
+            accountData={accountDetails}
+            onClose={() => setShowAccountDetails(false)}
+          ></AccountDetailsModal>
         </>
       )}
     </div>

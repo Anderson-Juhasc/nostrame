@@ -38,8 +38,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
             setPrvKey('')
             return false
           }
-          const len = wallet.importedAccounts.length
-          wallet.importedAccounts.push({ index: len, prvKey: prvKeyHex })
+          wallet.importedAccounts.push({ prvKey: prvKeyHex })
           const encryptedWallet = encrypt(wallet, storage.password)
           await browser.storage.local.set({ 
             wallet,
@@ -65,8 +64,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           return false
         }
 
-        const len = wallet.importedAccounts.length
-        wallet.importedAccounts.push({ index: len, prvKey: prvKeyHex })
+        wallet.importedAccounts.push({ prvKey: prvKeyHex })
         const encryptedWallet = encrypt(wallet, storage.password)
         await browser.storage.local.set({ 
           wallet,

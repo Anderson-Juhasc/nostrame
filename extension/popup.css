@@ -483,6 +483,7 @@ label {
   padding: 15px;
   border-radius: 8px;
   margin: 0 15px;
+  max-width: 340px;
   width: 100%;
 }
 
@@ -502,6 +503,12 @@ label {
   display: flex;
   position: relative;
   display: inline-block;
+}
+
+.dropdown-btn {
+  display: inline-block;
+  text-align: right;
+  width: 25px;
 }
 
 /* Style the dropdown content (hidden by default) */
