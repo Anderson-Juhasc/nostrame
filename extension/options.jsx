@@ -39,12 +39,21 @@ function Options() {
 
   const handleWalletExport = async () => {
     const storage = await browser.storage.local.get(['encryptedWallet'])
-    const jsonData = JSON.stringify({ backup: storage.encryptedWallet }, null, 2);
+    const jsonData = JSON.stringify({ vault: storage.encryptedWallet }, null, 2);
     const blob = new Blob([jsonData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
+
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = ('0' + (currentDate.getMonth() + 1)).slice(-2); // Adding 1 to month since it's zero-based
+    const day = ('0' + currentDate.getDate()).slice(-2);
+    const hours = ('0' + currentDate.getHours()).slice(-2);
+    const minutes = ('0' + currentDate.getMinutes()).slice(-2);
+    const seconds = ('0' + currentDate.getSeconds()).slice(-2);
+
     a.href = url;
-    a.download = 'NostrameWalletData.json';
+    a.download = `NostrameVaultData.${year}_${month}_${day}_${hours}_${minutes}_${seconds}.json`;
     a.click();
   }
 
@@ -53,7 +62,7 @@ function Options() {
     if (file) {
       const reader = new FileReader()
       reader.onload = async () => {
-        const encryptedWallet = (JSON.parse(reader.result)).backup
+        const encryptedWallet = (JSON.parse(reader.result)).vault
         try {
           const walletData = decrypt(encryptedWallet, password) 
           await browser.storage.local.set({ 
