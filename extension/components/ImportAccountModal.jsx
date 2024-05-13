@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
-import { encrypt, decrypt } from '../common'
+import { encrypt } from '../common'
 import Modal from './Modal'
 
 const ImportAccountModal = ({ isOpen, onClose, callBack }) => {

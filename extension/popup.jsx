@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react'
 import CryptoJS from 'crypto-js'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
-import {hexToBytes, bytesToHex} from '@noble/hashes/utils'
+import { hexToBytes, bytesToHex } from '@noble/hashes/utils'
 import { encrypt, decrypt } from './common'
 import EditAccountModal from './components/EditAccountModal'
 import ImportAccountModal from './components/ImportAccountModal'
 import AccountDetailsModal from './components/AccountDetailsModal'
+import GenerateRandomAccountModal from './components/GenerateRandomAccountModal'
 import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { Relay } from 'nostr-tools/relay'
 import { SimplePool } from 'nostr-tools/pool'
@@ -38,6 +39,7 @@ function Popup() {
   const [qrCodeKey, setQRCodeKey] = useState('')
   const [accountDetails, setAccountDetails] = useState('')
   const [showAccountDetails, setShowAccountDetails] = useState(false)
+  const [showRandomAccount, setShowRandomAccount] = useState(false)
 
   const pool = new SimplePool()
 
@@ -249,20 +251,6 @@ function Popup() {
     fetchData()
   }
 
-  const generateRandomAccount = async () => {
-    const storage = await browser.storage.local.get(['vault', 'password'])
-    const vault = storage.vault
-    const prvKeyHex = bytesToHex(generateSecretKey())
-    vault.importedAccounts.push({ prvKey: prvKeyHex })
-    const encryptedVault = encrypt(vault, storage.password)
-    await browser.storage.local.set({ 
-      vault,
-      encryptedVault,
-    })
-    setLoaded(false)
-    fetchData()
-  }
-
   const lockVault = async () => {
     setIsLocked(true)
     setAccounts([])
@@ -466,7 +454,7 @@ function Popup() {
                     <i className="icon-lock"></i>
                   </a>
                   &nbsp;
-                  <a href="#" onClick={generateRandomAccount} title="Generate random account">
+                  <a href="#" onClick={() => setShowRandomAccount(true)} title="Generate random account">
                     <i className="icon-loop2"></i>
                   </a>
                   &nbsp;
@@ -613,6 +601,12 @@ function Popup() {
             accountData={accountDetails}
             onClose={() => setShowAccountDetails(false)}
           ></AccountDetailsModal>
+
+          <GenerateRandomAccountModal 
+            isOpen={showRandomAccount}
+            callBack={importAccountCallback}
+            onClose={() => setShowRandomAccount(false)}
+          ></GenerateRandomAccountModal>
         </>
       )}
     </div>
