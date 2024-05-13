@@ -37,7 +37,7 @@ function Options() {
     setFile(file)
   }
 
-  const handleWalletExport = async () => {
+  const handleVaultExport = async () => {
     const storage = await browser.storage.local.get(['encryptedVault'])
     const jsonData = JSON.stringify({ vault: storage.encryptedVault }, null, 2);
     const blob = new Blob([jsonData], { type: 'application/json' });
@@ -57,7 +57,7 @@ function Options() {
     a.click();
   }
 
-  const handleWalletImport = (e) => {
+  const handleVaultImport = (e) => {
     e.preventDefault()
     if (file) {
       const reader = new FileReader()
@@ -132,7 +132,7 @@ function Options() {
             { isAuthenticated && (
               <>
                 <h2>Export backup</h2>
-                <button type="button" onClick={handleWalletExport}>Export backup</button>
+                <button type="button" onClick={handleVaultExport}>Export backup</button>
 
                 <hr />
 
@@ -175,7 +175,7 @@ function Options() {
               <>
                 <h2>Import backup</h2>
 
-                <form onSubmit={handleWalletImport}>
+                <form onSubmit={handleVaultImport}>
                   <input type="file" required onChange={handleFileChange} />
                   <br />
                   <input
@@ -195,14 +195,14 @@ function Options() {
 
             { isAuthenticated && (
               <>
-                <h2>Reset Wallet</h2>
+                <h2>Reset Vault</h2>
 
-                <button type="button" onClick={handleResetVault}>Reset Wallet</button>
+                <button type="button" onClick={handleResetVault}>Reset Vault</button>
               </>
             )}
           </>
         ) : (
-          <h2>Wallet is locked</h2>
+          <h2>Vault is locked</h2>
         )}
       </div>
     </div>

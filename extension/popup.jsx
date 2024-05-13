@@ -152,10 +152,10 @@ function Popup() {
     navigator.clipboard.writeText(text)
   }
   
-  const handleWalletChange = (e) => {
+  const handleVaultChange = (e) => {
     const { name, value } = e.target;
-    setVault(prevWallet => ({
-      ...prevWallet,
+    setVault(prevVault => ({
+      ...prevVault,
       [name]: value
     }))
   }
@@ -263,7 +263,7 @@ function Popup() {
     fetchData()
   }
 
-  const lockWallet = async () => {
+  const lockVault = async () => {
     setIsLocked(true)
     setAccounts([])
     setLoaded(false)
@@ -276,7 +276,7 @@ function Popup() {
     })
   }
 
-  const unlockWallet = async (e) => {
+  const unlockVault = async (e) => {
     e.preventDefault()
     const storage = await browser.storage.local.get(['encryptedVault'])
     const vaultData = decrypt(storage.encryptedVault, password) 
@@ -348,7 +348,7 @@ function Popup() {
                   name="mnemonic"
                   required
                   value={vault.mnemonic}
-                  onChange={handleWalletChange}
+                  onChange={handleVaultChange}
                 ></textarea>
                 <br />
                 <input
@@ -357,7 +357,7 @@ function Popup() {
                   placeholder="Passphrase"
                   name="passphrase"
                   value={vault.passphrase}
-                  onChange={handleWalletChange}
+                  onChange={handleVaultChange}
                 />
                 <br />
                 <input
@@ -389,7 +389,7 @@ function Popup() {
                   name="mnemonic"
                   required
                   value={vault.mnemonic}
-                  onChange={handleWalletChange}
+                  onChange={handleVaultChange}
                 ></textarea>
                 <br />
                 <input
@@ -398,7 +398,7 @@ function Popup() {
                   placeholder="Passphrase"
                   name="passphrase"
                   value={vault.passphrase}
-                  onChange={handleWalletChange}
+                  onChange={handleVaultChange}
                 />
                 <br />
                 <input
@@ -431,8 +431,8 @@ function Popup() {
 
           <div className="container">
             <br />
-            <form onSubmit={unlockWallet}>
-              <label>Wallet is locked</label>
+            <form onSubmit={unlockVault}>
+              <label>Vault is locked</label>
               <br />
               <input
                 type="password"
@@ -462,7 +462,7 @@ function Popup() {
                 </h1>
 
                 <div>
-                  <a href="#" onClick={lockWallet} title="Lock now">
+                  <a href="#" onClick={lockVault} title="Lock now">
                     <i className="icon-lock"></i>
                   </a>
                   &nbsp;

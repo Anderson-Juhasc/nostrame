@@ -22,22 +22,22 @@ const SecretsModal = ({ isOpen, onClose }) => {
     onClose()
   }
 
-  const decryptWallet = async (e) => {
+  const decryptVault = async (e) => {
     e.preventDefault()
 
     const storage = await browser.storage.local.get(['encryptedVault'])
-    const decryptedWallet = decrypt(storage.encryptedVault, password) 
+    const decryptedVault = decrypt(storage.encryptedVault, password) 
     setIsDecrypted(true)
     setPassword('')
-    setVault(decryptedWallet)
+    setVault(decryptedVault)
   }
 
   return (
     <div>
       <Modal isOpen={showModal} onClose={onClose}>
         {!isDecrypted ? (
-          <form onSubmit={decryptWallet}>
-            <label>Wallet is encrypted</label>
+          <form onSubmit={decryptVault}>
+            <label>Vault is encrypted</label>
             <br />
             <input
               type="password"
