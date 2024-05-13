@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
 import { hexToBytes, bytesToHex } from '@noble/hashes/utils'
-import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools/pure'
+import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { encrypt } from '../common'
 import Modal from './Modal'
 
@@ -65,7 +65,7 @@ const GenerateRandomAccountModal = ({ isOpen, onClose, callBack }) => {
   return (
     <div>
       <Modal isOpen={showModal} onClose={closeModal}>
-        <h2>Random Account</h2>
+        <h2>Generate Account</h2>
 
         <p className="break-string">
           <strong>{format === 'bech32' ? 'Nsec' : `Private Key`}:</strong>
@@ -94,7 +94,7 @@ const GenerateRandomAccountModal = ({ isOpen, onClose, callBack }) => {
           </a>
         </p>
 
-        <button type="button" className="btn" onClick={generateRandomAccount}>Generate</button>
+        <button type="button" className="btn" onClick={generateRandomAccount}>Generate new</button>
         <br />
         <button type="button" className="btn" onClick={importAccount}>Import account</button>
       </Modal>
