@@ -4,7 +4,7 @@ import { SimplePool } from 'nostr-tools/pool'
 import { finalizeEvent } from 'nostr-tools/pure'
 import Modal from './Modal';
 
-const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
+const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
   const pool = new SimplePool()
 
   const [showModal, setShowModal] = useState(isOpen);
@@ -55,7 +55,7 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
       created_at: Math.floor(Date.now() / 1000),
       tags: [],
       content: JSON.stringify({
-        name: (account.name).toLowerCase(), 
+        name: account.name, 
         display_name: account.name,
         about: account.about,
         picture: account.picture,
@@ -127,4 +127,4 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
   )
 }
 
-export default SecretsModal
+export default EditAccountModal
