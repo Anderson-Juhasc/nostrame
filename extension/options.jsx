@@ -38,8 +38,8 @@ function Options() {
   }
 
   const handleWalletExport = async () => {
-    const storage = await browser.storage.local.get(['encryptedWallet'])
-    const jsonData = JSON.stringify({ vault: storage.encryptedWallet }, null, 2);
+    const storage = await browser.storage.local.get(['encryptedVault'])
+    const jsonData = JSON.stringify({ vault: storage.encryptedVault }, null, 2);
     const blob = new Blob([jsonData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -62,12 +62,12 @@ function Options() {
     if (file) {
       const reader = new FileReader()
       reader.onload = async () => {
-        const encryptedWallet = (JSON.parse(reader.result)).vault
+        const encryptedVault = (JSON.parse(reader.result)).vault
         try {
-          const walletData = decrypt(encryptedWallet, password) 
+          const vaultData = decrypt(encryptedVault, password) 
           await browser.storage.local.set({ 
-            wallet: walletData,
-            encryptedWallet,
+            vault: vaultData,
+            encryptedVault,
             isAuthenticated: true,
             password
           })
@@ -81,11 +81,11 @@ function Options() {
     }
   }
 
-  const handleResetWallet = async () => {
-    if (await confirm("Are you sure you want to reset the wallet? Make sure if you have made a backup before you continue.")) {
+  const handleResetVault = async () => {
+    if (await confirm("Are you sure you want to reset the vault? Make sure if you have made a backup before you continue.")) {
       await browser.storage.local.set({ 
-        encryptedWallet: '',
-        wallet: {},
+        encryptedVault: '',
+        vault: {},
         password: '',
         isAuthenticated: false,
       })
@@ -197,7 +197,7 @@ function Options() {
               <>
                 <h2>Reset Wallet</h2>
 
-                <button type="button" onClick={handleResetWallet}>Reset Wallet</button>
+                <button type="button" onClick={handleResetVault}>Reset Wallet</button>
               </>
             )}
           </>

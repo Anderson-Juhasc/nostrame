@@ -21,14 +21,14 @@ function Popup() {
   const [password, setPassword] = useState('')
   const [step, setStep] = useState(1)
   const [file, setFile] = useState(null)
-  const [wallet, setWallet] = useState({
+  const [vault, setVault] = useState({
     mnemonic: '',
     passphrase: '',
     accountIndex: 0,
     accounts: [], // maybe change to derivedAccounts
     importedAccounts: [],
   })
-  const [encryptedWallet, setEncryptedWallet] = useState('')
+  const [encryptedVault, setEncryptedVault] = useState('')
   const [accounts, setAccounts] = useState([])
   const [importedAccounts, setImportedAccounts] = useState([])
   const [accountEditing, setAccountEditing] = useState({})
@@ -62,9 +62,9 @@ function Popup() {
     let authors = []
 
     if (storage.isAuthenticated && !storage.isLocked) {
-      let l = storage.wallet.accounts.length
+      let l = storage.vault.accounts.length
       for (let i = 0; i < l; i++) {
-        const prvKey = storage.wallet.accounts[i].prvKey
+        const prvKey = storage.vault.accounts[i].prvKey
         const nsec = nip19.nsecEncode(hexToBytes(prvKey))
         const pubKey = getPublicKey(prvKey)
         const npub = nip19.npubEncode(pubKey)
@@ -84,10 +84,9 @@ function Popup() {
         ]
       }
 
-      let len = storage.wallet.importedAccounts.length
+      let len = storage.vault.importedAccounts.length
       for (let i = 0; i < len; i++) {
-        const prvKey = storage.wallet.importedAccounts[i].prvKey
-        const index = storage.wallet.importedAccounts[i].index
+        const prvKey = storage.vault.importedAccounts[i].prvKey
         const nsec = nip19.nsecEncode(hexToBytes(prvKey))
         const pubKey = getPublicKey(prvKey)
         const npub = nip19.npubEncode(pubKey)
@@ -107,8 +106,8 @@ function Popup() {
         ]
       }
 
-      setWallet(storage.wallet)
-      setEncryptedWallet(storage.encryptedWallet)
+      setVault(storage.vault)
+      setEncryptedVault(storage.encryptedVault)
 
       let relays = storage.relays
       let events = await pool.querySync(relays, { kinds: [0], authors })
@@ -157,7 +156,7 @@ function Popup() {
   
   const handleWalletChange = (e) => {
     const { name, value } = e.target;
-    setWallet(prevWallet => ({
+    setVault(prevWallet => ({
       ...prevWallet,
       [name]: value
     }))
@@ -193,8 +192,8 @@ function Popup() {
     e.preventDefault()
     setStep(3)
     let mnemonic = generateSeedWords()
-    setWallet({
-      ...wallet,
+    setVault({
+      ...vault,
       mnemonic: mnemonic
     })
   }
@@ -202,24 +201,23 @@ function Popup() {
   async function saveAccount(e) {
     e.preventDefault()
 
-    const walletData = {
-      mnemonic: wallet.mnemonic,
-      passphrase: wallet.passphrase,
+    const vaultData = {
+      mnemonic: vault.mnemonic,
+      passphrase: vault.passphrase,
       accountIndex: 0,
       accounts: [],
       importedAccounts: [],
     }
 
-    const prvKey = privateKeyFromSeedWords(walletData.mnemonic, walletData.passphrase, walletData.accountIndex)
-    walletData.accounts.push({
-      index: walletData.accountIndex,
+    const prvKey = privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex)
+    vaultData.accounts.push({
       prvKey,
     })
 
-    const encryptedWallet = encrypt(walletData, password)
+    const encryptedVault = encrypt(vaultData, password)
     await browser.storage.local.set({ 
-      wallet: walletData,
-      encryptedWallet,
+      vault: vaultData,
+      encryptedVault,
       isAuthenticated: true,
       password
     })
@@ -237,33 +235,31 @@ function Popup() {
   }
 
   const deriveNewAccount = async () => {
-    const storage = await browser.storage.local.get(['wallet', 'password'])
-    let walletData = storage.wallet
-    walletData.accountIndex++
-    const prvKey = privateKeyFromSeedWords(walletData.mnemonic, walletData.passphrase, walletData.accountIndex)
-    walletData.accounts.push({
-      index: walletData.accountIndex,
+    const storage = await browser.storage.local.get(['vault', 'password'])
+    let vaultData = storage.vault
+    vaultData.accountIndex++
+    const prvKey = privateKeyFromSeedWords(vaultData.mnemonic, vaultData.passphrase, vaultData.accountIndex)
+    vaultData.accounts.push({
       prvKey,
     })
-    const encryptedWallet = encrypt(walletData, storage.password)
+    const encryptedVault = encrypt(vaultData, storage.password)
     await browser.storage.local.set({ 
-      wallet: walletData,
-      encryptedWallet,
+      vault: vaultData,
+      encryptedVault,
     })
     setLoaded(false)
     fetchData()
   }
 
   const generateRandomAccount = async () => {
-    const storage = await browser.storage.local.get(['wallet', 'password'])
-    const wallet = storage.wallet
+    const storage = await browser.storage.local.get(['vault', 'password'])
+    const vault = storage.vault
     const prvKeyHex = bytesToHex(generateSecretKey())
-    const len = wallet.importedAccounts.length
-    wallet.importedAccounts.push({ index: len, prvKey: prvKeyHex })
-    const encryptedWallet = encrypt(wallet, storage.password)
+    vault.importedAccounts.push({ prvKey: prvKeyHex })
+    const encryptedVault = encrypt(vault, storage.password)
     await browser.storage.local.set({ 
-      wallet,
-      encryptedWallet,
+      vault,
+      encryptedVault,
     })
     setLoaded(false)
     fetchData()
@@ -275,7 +271,7 @@ function Popup() {
     setLoaded(false)
     await browser.storage.local.set({ 
       isLocked: true,
-      wallet: {
+      vault: {
         accounts: [],
       },
       password: '',
@@ -284,12 +280,12 @@ function Popup() {
 
   const unlockWallet = async (e) => {
     e.preventDefault()
-    const storage = await browser.storage.local.get(['encryptedWallet'])
-    const walletData = decrypt(storage.encryptedWallet, password) 
+    const storage = await browser.storage.local.get(['encryptedVault'])
+    const vaultData = decrypt(storage.encryptedVault, password) 
     setIsLocked(false)
     await browser.storage.local.set({ 
       isLocked: false,
-      wallet: walletData,
+      vault: vaultData,
       password,
     })
     setPassword('')
@@ -310,15 +306,20 @@ function Popup() {
 
   const deleteImportedAccount = async (index) => {
     if (await confirm("Are you sure you want to delete this account? Make sure if you have made a backup before you continue.")) {
-      const newImportedAccounts = [...importedAccounts]
+      const storage = await browser.storage.local.get(['vault', 'password'])
+      const vault = storage.vault
+      const newImportedAccounts = [...vault.importedAccounts]
       if (index !== -1) {
         newImportedAccounts.splice(index, 1)
-        setImportedAccounts(newImportedAccounts)
       }
-      wallet.importedAccounts = newImportedAccounts
+      vault.importedAccounts = newImportedAccounts
+      const encryptedVault = encrypt(vault, storage.password)
       await browser.storage.local.set({ 
-        wallet,
+        encryptedVault,
+        vault,
       })
+      setLoaded(false)
+      fetchData()
     }
   }
 
@@ -327,97 +328,103 @@ function Popup() {
       case 1: 
         return (
           <div className="Popup">
-            <h1>Nostrame</h1>
-            <button type="button" className="btn" onClick={() => setStep(2)}>I have an account</button>
-            <br />
-            <button type="button" className="btn" onClick={openOptionsButton}>Import backup</button>
-            <br />
-            <button type="button" className="btn" onClick={createNewAccount}>Create new account</button>
+            <div className="container">
+              <h1>Nostrame</h1>
+              <button type="button" className="btn" onClick={() => setStep(2)}>I have an account</button>
+              <br />
+              <button type="button" className="btn" onClick={openOptionsButton}>Import backup</button>
+              <br />
+              <button type="button" className="btn" onClick={createNewAccount}>Create new account</button>
+            </div>
           </div>
         )
       case 2: 
         return (
           <div className="Popup">
-            <form onSubmit={saveAccount}>
-              <h1>Create new account</h1>
-              <textarea
-                rows="2"
-                placeholder="Mnemonic"
-                name="mnemonic"
-                required
-                value={wallet.mnemonic}
-                onChange={handleWalletChange}
-              ></textarea>
-              <br />
-              <input
-                type="text"
-                autoComplete="off"
-                placeholder="Passphrase"
-                name="passphrase"
-                value={wallet.passphrase}
-                onChange={handleWalletChange}
-              />
-              <br />
-              <input
-                type="password"
-                autoComplete="off"
-                placeholder="Password"
-                name="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <br />
-              <button type="submit" className="btn">Save</button>
-              <br />
-              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
-            </form>
+            <div className="container">
+              <form onSubmit={saveAccount}>
+                <h1>Create new account</h1>
+                <textarea
+                  rows="2"
+                  placeholder="Mnemonic"
+                  name="mnemonic"
+                  required
+                  value={vault.mnemonic}
+                  onChange={handleWalletChange}
+                ></textarea>
+                <br />
+                <input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Passphrase"
+                  name="passphrase"
+                  value={vault.passphrase}
+                  onChange={handleWalletChange}
+                />
+                <br />
+                <input
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Password"
+                  name="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <br />
+                <button type="submit" className="btn">Save</button>
+                <br />
+                <button type="button" className="btn" onClick={() => { setStep(1); setVault({...vault, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
+              </form>
+            </div>
           </div>
         )
       case 3: 
         return (
           <div className="Popup">
-            <form onSubmit={saveAccount}>
-              <h1>Create new account</h1>
-              <textarea
-                rows="2"
-                placeholder="Mnemonic"
-                name="mnemonic"
-                required
-                value={wallet.mnemonic}
-                onChange={handleWalletChange}
-              ></textarea>
-              <br />
-              <input
-                type="password"
-                autoComplete="off"
-                placeholder="Passphrase"
-                name="passphrase"
-                value={wallet.passphrase}
-                onChange={handleWalletChange}
-              />
-              <br />
-              <input
-                type="password"
-                autoComplete="off"
-                placeholder="Password"
-                name="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <br />
-              <button type="submit" className="btn">Save</button>
-              <br />
-              <button type="button" className="btn" onClick={() => { setStep(1); setWallet({...wallet, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
-            </form>
+            <div className="container">
+              <form onSubmit={saveAccount}>
+                <h1>Create new account</h1>
+                <textarea
+                  rows="2"
+                  placeholder="Mnemonic"
+                  name="mnemonic"
+                  required
+                  value={vault.mnemonic}
+                  onChange={handleWalletChange}
+                ></textarea>
+                <br />
+                <input
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Passphrase"
+                  name="passphrase"
+                  value={vault.passphrase}
+                  onChange={handleWalletChange}
+                />
+                <br />
+                <input
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Password"
+                  name="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <br />
+                <button type="submit" className="btn">Save</button>
+                <br />
+                <button type="button" className="btn" onClick={() => { setStep(1); setVault({...vault, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
+              </form>
+            </div>
           </div>
         )
     }
   }
 
   return (
-    <div className="Popup container">
+    <div className="Popup">
       {isLocked ? (
         <>
           <div className="header">
@@ -584,7 +591,9 @@ function Popup() {
             </>
           ) : (
             <>
-              Loading...
+              <div className="container">
+                Loading...
+              </div>
             </>
           )}
 

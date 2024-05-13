@@ -6,14 +6,14 @@ import { decrypt } from '../common'
 const SecretsModal = ({ isOpen, onClose }) => {
   const [showModal, setShowModal] = useState(isOpen)
   const [password, setPassword] = useState('')
-  const [wallet, setWallet] = useState({})
+  const [vault, setVault] = useState({})
   const [isDecrypted, setIsDecrypted] = useState(false)
 
   useEffect(() => {
     setShowModal(isOpen)
     if (!isOpen) {
       setIsDecrypted(false)
-      setWallet({})
+      setVault({})
     }
   }, [isOpen])
 
@@ -25,11 +25,11 @@ const SecretsModal = ({ isOpen, onClose }) => {
   const decryptWallet = async (e) => {
     e.preventDefault()
 
-    const storage = await browser.storage.local.get(['encryptedWallet'])
-    const decryptedWallet = decrypt(storage.encryptedWallet, password) 
+    const storage = await browser.storage.local.get(['encryptedVault'])
+    const decryptedWallet = decrypt(storage.encryptedVault, password) 
     setIsDecrypted(true)
     setPassword('')
-    setWallet(decryptedWallet)
+    setVault(decryptedWallet)
   }
 
   return (
@@ -54,9 +54,9 @@ const SecretsModal = ({ isOpen, onClose }) => {
         ) : (
           <>
             <h2>Secrets</h2>
-            <p><strong>Mnemonic:</strong> {wallet.mnemonic}</p>
-            { wallet.passphrase && (<p><strong>Passphrase:</strong> {wallet.passphrase}</p>) }
-            <p><strong>Account index:</strong> {wallet.accountIndex}</p>
+            <p><strong>Mnemonic:</strong> {vault.mnemonic}</p>
+            { vault.passphrase && (<p><strong>Passphrase:</strong> {vault.passphrase}</p>) }
+            <p><strong>Account index:</strong> {vault.accountIndex}</p>
           </>
         )}
       </Modal>

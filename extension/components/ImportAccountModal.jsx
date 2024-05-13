@@ -21,8 +21,8 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
   const importAccount = async (e) => {
     e.preventDefault()
 
-    const storage = await browser.storage.local.get(['wallet', 'password'])
-    const wallet = storage.wallet
+    const storage = await browser.storage.local.get(['vault', 'password'])
+    const vault = storage.vault
 
     if (/^nsec/.test(prvKey)) {
       try {
@@ -30,19 +30,19 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         if (type === 'nsec') {
           const prvKeyHex = bytesToHex(data)
-          //if (!wallet.importedAccounts) { wallet.importedAccounts = [] }
-          const prvKeyExist = wallet.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
-          const prvKeyExistInDerived = wallet.accounts.find(obj => obj['prvKey'] === prvKeyHex)
+          //if (!vault.importedAccounts) { vault.importedAccounts = [] }
+          const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
+          const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
           if (prvKeyExist || prvKeyExistInDerived) {
             alert('Please provide a not existing private key')
             setPrvKey('')
             return false
           }
-          wallet.importedAccounts.push({ prvKey: prvKeyHex })
-          const encryptedWallet = encrypt(wallet, storage.password)
+          vault.importedAccounts.push({ prvKey: prvKeyHex })
+          const encryptedVault = encrypt(vault, storage.password)
           await browser.storage.local.set({ 
-            wallet,
-            encryptedWallet,
+            vault,
+            encryptedVault,
           })
           callBack()
         }
@@ -56,19 +56,19 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         let prvKeyBytes = hexToBytes(prvKey)
         let prvKeyHex = bytesToHex(prvKeyBytes) 
 
-        const prvKeyExist = wallet.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
-        const prvKeyExistInDerived = wallet.accounts.find(obj => obj['prvKey'] === prvKeyHex)
+        const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
+        const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
         if (prvKeyExist || prvKeyExistInDerived) {
           alert('Please provide a not existing private key')
           setPrvKey('')
           return false
         }
 
-        wallet.importedAccounts.push({ prvKey: prvKeyHex })
-        const encryptedWallet = encrypt(wallet, storage.password)
+        vault.importedAccounts.push({ prvKey: prvKeyHex })
+        const encryptedVault = encrypt(vault, storage.password)
         await browser.storage.local.set({ 
-          wallet,
-          encryptedWallet,
+          vault,
+          encryptedVault,
         })
 
         callBack()
