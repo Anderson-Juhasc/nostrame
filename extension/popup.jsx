@@ -8,7 +8,6 @@ import {hexToBytes, bytesToHex} from '@noble/hashes/utils'
 import { encrypt, decrypt } from './common'
 import EditAccountModal from './components/EditAccountModal'
 import ImportAccountModal from './components/ImportAccountModal'
-import QRCodeModal from './components/QRCodeModal'
 import AccountDetailsModal from './components/AccountDetailsModal'
 import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { Relay } from 'nostr-tools/relay'
@@ -37,7 +36,6 @@ function Popup() {
   const [showEditAccountModal, setEditAccountModal] = useState(false)
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
   const [qrCodeKey, setQRCodeKey] = useState('')
-  const [qrCodeModal, setQRCodeModal] = useState(false)
   const [accountDetails, setAccountDetails] = useState('')
   const [showAccountDetails, setShowAccountDetails] = useState(false)
 
@@ -596,12 +594,6 @@ function Popup() {
               </div>
             </>
           )}
-
-          <QRCodeModal 
-            isOpen={qrCodeModal}
-            keyValue={qrCodeKey}
-            onClose={() => setQRCodeModal(false)}
-          ></QRCodeModal>
 
           <ImportAccountModal 
             isOpen={showImportAccountModal}
