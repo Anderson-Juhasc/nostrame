@@ -10,8 +10,8 @@ import EditAccountModal from './components/EditAccountModal'
 import ImportAccountModal from './components/ImportAccountModal'
 import AccountDetailsModal from './components/AccountDetailsModal'
 import GenerateRandomAccountModal from './components/GenerateRandomAccountModal'
-import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools/pure'
-import { Relay } from 'nostr-tools/relay'
+import DeriveAccountModal from './components/DeriveAccountModal'
+import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { SimplePool } from 'nostr-tools/pool'
 
 function Popup() {
@@ -40,6 +40,7 @@ function Popup() {
   const [accountDetails, setAccountDetails] = useState('')
   const [showAccountDetails, setShowAccountDetails] = useState(false)
   const [showRandomAccount, setShowRandomAccount] = useState(false)
+  const [showDeriveAccount, setShowDeriveAccount] = useState(false)
 
   const pool = new SimplePool()
 
@@ -234,23 +235,6 @@ function Popup() {
     }
   }
 
-  const deriveNewAccount = async () => {
-    const storage = await browser.storage.local.get(['vault', 'password'])
-    let vaultData = storage.vault
-    vaultData.accountIndex++
-    const prvKey = privateKeyFromSeedWords(vaultData.mnemonic, vaultData.passphrase, vaultData.accountIndex)
-    vaultData.accounts.push({
-      prvKey,
-    })
-    const encryptedVault = encrypt(vaultData, storage.password)
-    await browser.storage.local.set({ 
-      vault: vaultData,
-      encryptedVault,
-    })
-    setLoaded(false)
-    fetchData()
-  }
-
   const lockVault = async () => {
     setIsLocked(true)
     setAccounts([])
@@ -287,6 +271,12 @@ function Popup() {
   const importAccountCallback = () => {
     setLoaded(false)
     setShowImportAccountModal(false)
+    fetchData()
+  }
+
+  const deriveAccountCallback = () => {
+    setLoaded(false)
+    setShowDeriveAccount(false)
     fetchData()
   }
 
@@ -471,7 +461,7 @@ function Popup() {
                     </h3>
 
                     <div>
-                      <button type="button" onClick={deriveNewAccount} title="Derive new account">
+                      <button type="button" onClick={() => setShowDeriveAccount(true)} title="Derive new account">
                         <strong>+</strong>
                       </button>
                     </div>
@@ -607,6 +597,12 @@ function Popup() {
             callBack={importAccountCallback}
             onClose={() => setShowRandomAccount(false)}
           ></GenerateRandomAccountModal>
+
+          <DeriveAccountModal 
+            isOpen={showDeriveAccount}
+            callBack={deriveAccountCallback}
+            onClose={() => setShowDeriveAccount(false)}
+          ></DeriveAccountModal>
         </>
       )}
     </div>
