@@ -19,11 +19,11 @@ const SecretsModal = ({ isOpen, onClose, accountData, callBack }) => {
   useEffect(() => {
     //setAccount(accountData)
     setAccount({
-      name: accountData.name,
-      about: accountData.about,
-      picture: accountData.picture,
-      nip05: accountData.nip05,
-      lud16: accountData.lud16,
+      name: accountData.name || '',
+      about: accountData.about || '',
+      picture: accountData.picture || '',
+      nip05: accountData.nip05 || '',
+      lud16: accountData.lud16 || '',
     })
   }, [accountData])
 
