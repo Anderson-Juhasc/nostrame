@@ -568,6 +568,7 @@ function Popup() {
           ) : (
             <>
               <div className="container">
+                <h1>Nostrame</h1>
                 Loading...
               </div>
             </>
