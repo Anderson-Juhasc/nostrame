@@ -51,8 +51,6 @@ function Popup() {
   const fetchData = async () => {
     const storage = await browser.storage.local.get()
 
-    console.log(storage)
-
     setIsAuthenticated(storage.isAuthenticated)
 
     if (storage.isLocked) {
