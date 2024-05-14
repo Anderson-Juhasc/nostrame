@@ -1,4 +1,4 @@
-# Nostrame(Nostr Account Manager Extension)
+# Nostrame(Nostr Accounts Managing Extension)
 
 Nostrame is a comprehensive account management solution designed to streamline your digital accounts handling. With its robust features, you can effortlessly generate accounts using a mnemonic and passphrase, import external accounts in hex and bech32 formats, and conveniently access and modify kind 0 data. What sets Nostrame apart is its advanced encryption capabilities, allowing you to safeguard your mnemonic with ease. Additionally, it have backup encrypted processes by enabling import and export functionalities using a master password.
 
