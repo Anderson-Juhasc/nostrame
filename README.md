@@ -8,6 +8,10 @@ Nostrame is a comprehensive account management solution designed to streamline y
 
 This extension is Chromium-only.
 
+## Install
+
+- [Chrome Extension](https://chromewebstore.google.com/detail/nostrame/phfdiknibomfgpefcicfckkklimoniej)
+
 ## Develop
 
 To run the plugin from this code:
