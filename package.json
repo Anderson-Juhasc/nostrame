@@ -2,9 +2,9 @@
   "name": "nostrame",
   "version": "0.0.3",
   "license": "WTFPL",
+  "type": "module",
   "dependencies": {
     "crypto-js": "^4.2.0",
-    "esbuild": "^0.14.11",
     "nostr-tools": "^2.5.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -13,7 +13,12 @@
   },
   "scripts": {
     "build": "./build.js prod",
-    "watch": "ag -l --js | entr ./build.js",
+    "watch": "node ./build.js",
     "package": "./build.js prod; cd extension; zip -r archive *; cd ..; mv extension/archive.zip ./nostrame.zip"
+  },
+  "devDependencies": {
+    "chokidar": "^3.6.0",
+    "esbuild": "0.21.3",
+    "sass": "^1.77.2"
   }
 }
