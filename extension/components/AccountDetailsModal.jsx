@@ -1,6 +1,5 @@
-import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
-import QRCode from "react-qr-code"
+import {QRCodeSVG} from 'qrcode.react'
 import Modal from './Modal'
 
 const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
@@ -28,7 +27,7 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
     navigator.clipboard.writeText(text)
   }
 
-  async function convertFormat(e, account) {
+  async function convertFormat(e) {
     e.preventDefault()
     setFormat(format === 'bech32' ? 'hex' : 'bech32')
   }
@@ -40,17 +39,16 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
           <>
             <h2 style={{ textAlign: 'center' }}>{account.name}</h2>
             <div style={{ height: "auto", margin: "0 auto", maxWidth: 200, width: "100%" }}>
-              <QRCode
-                size={256}
+              <QRCodeSVG
                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                value={(format === 'bech32' ? account.npub : account.pubKey) || ''}
-                viewBox={`0 0 256 256`}
+                size={256}
+                value={(format === 'bech32' ? account.npub : account.pubKey)}
               />
             </div>
             <p className="break-string">
               <strong>{format === 'bech32' ? 'Npub' : 'Public Key'}:</strong>
               &nbsp;
-              <a href="#" onClick={(e) => convertFormat(e, account)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+              <a href="#" onClick={(e) => convertFormat(e)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
                 <i className="icon-tab"></i>
               </a>
               <br />
@@ -65,19 +63,18 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
           </>
         ) : (
           <>
-            <h2 style={{ textAlign: 'center' }}>Show private key</h2>
+            <h2 style={{ textAlign: 'center' }}>Private key</h2>
             <div style={{ height: "auto", margin: "0 auto", maxWidth: 200, width: "100%" }}>
-              <QRCode
-                size={256}
+              <QRCodeSVG
                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                value={format === 'bech32' ? account.nsec : account.prvKey || ''}
-                viewBox={`0 0 256 256`}
+                size={256}
+                value={(format === 'bech32' ? account.nsec : account.prvKey)}
               />
             </div>
             <p className="break-string">
               <strong>{format === 'bech32' ? 'Nsec' : `Private Key`}:</strong>
               &nbsp;
-              <a href="#" onClick={(e) => convertFormat(e, account)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+              <a href="#" onClick={(e) => convertFormat(e)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
                 <i className="icon-tab"></i>
               </a>
               <br />

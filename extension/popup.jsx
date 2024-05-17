@@ -37,7 +37,7 @@ function Popup() {
   const [showEditAccountModal, setEditAccountModal] = useState(false)
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
   const [qrCodeKey, setQRCodeKey] = useState('')
-  const [accountDetails, setAccountDetails] = useState('')
+  const [accountDetails, setAccountDetails] = useState({})
   const [showAccountDetails, setShowAccountDetails] = useState(false)
   const [showRandomAccount, setShowRandomAccount] = useState(false)
   const [showDeriveAccount, setShowDeriveAccount] = useState(false)
