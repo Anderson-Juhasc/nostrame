@@ -3,6 +3,7 @@ import CryptoJS from 'crypto-js'
 import {render} from 'react-dom'
 import SecretsModal from './components/SecretsModal'
 import React, { useState, useEffect } from 'react'
+import { ToastContainer, toast } from 'react-toastify'
 
 import { encrypt, decrypt } from './common'
 
@@ -14,6 +15,11 @@ function Options() {
   const [relay, setRelay] = useState('')
   const [relays, setRelays] = useState([])
   const [showSecretsModal, setShowSecretsModal] = useState(false)
+  const [changePassword, setChangePassword] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: '',
+  })
 
   useEffect(() => {
     fetchData()
@@ -122,6 +128,57 @@ function Options() {
     })
   }
 
+  const changePasswordInput = (e) => {
+    const { name, value } = e.target;
+    setChangePassword(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const submitChangePassword = async (e) => {
+    e.preventDefault()
+
+    const confirmChange = confirm("Are you sure you want to change the password?")
+    if (!confirmChange) return
+
+    if (changePassword.newPassword !== changePassword.confirmNewPassword) {
+      alert('New password do not match!')
+
+      setChangePassword({
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: '',
+      })
+
+      return
+    }
+
+    const storage = await browser.storage.local.get(['encryptedVault'])
+    try {
+      const decryptedVault = decrypt(storage.encryptedVault, changePassword.currentPassword) 
+      const encryptedVault = encrypt(decryptedVault, changePassword.newPassword)
+      await browser.storage.local.set({ 
+        encryptedVault,
+        password: changePassword.currentPassword
+      })
+      setChangePassword({
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: '',
+      })
+      fetchData()
+      toast.success("Your password was changed with success")
+    } catch (e) {
+      toast.error("Your password do not match")
+      setChangePassword({
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: '',
+      })
+    }
+  }
+
   return (
     <div className="Options">
       <div className="container">
@@ -156,6 +213,7 @@ function Options() {
                     pattern="^wss:\/\/([a-zA-Z0-9\-\.]+)(:[0-9]+)?(\/[a-zA-Z0-9\-\.\/\?\:@&=%\+\/~#]*)?$"
                     onChange={(e) => setRelay(e.target.value)}
                   />
+                  <br />
                   <button type="submit" className="btn">Add</button>
                 </form>
 
@@ -168,6 +226,43 @@ function Options() {
                     </li>
                   ))}
                 </ul>
+
+                <hr />
+
+                <form onSubmit={submitChangePassword}>
+                  <h2>Change Password</h2>
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    placeholder="Current password"
+                    name="currentPassword"
+                    required
+                    value={changePassword.currentPassword}
+                    onChange={(e) => changePasswordInput(e)}
+                  />
+                  <br />
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    placeholder="New password"
+                    name="newPassword"
+                    required
+                    value={changePassword.newPassword}
+                    onChange={(e) => changePasswordInput(e)}
+                  />
+                  <br />
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    placeholder="Confirm new password"
+                    name="confirmNewPassword"
+                    required
+                    value={changePassword.confirmNewPassword}
+                    onChange={(e) => changePasswordInput(e)}
+                  />
+                  <br />
+                  <button type="submit" className="btn">Change password</button>
+                </form>
               </>
             )}
 
@@ -205,6 +300,8 @@ function Options() {
           <h2>Vault is locked</h2>
         )}
       </div>
+
+      <ToastContainer />
     </div>
   )
 
