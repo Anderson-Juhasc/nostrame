@@ -1,7 +1,6 @@
 import browser from 'webextension-polyfill'
-import CryptoJS from 'crypto-js'
 import {render} from 'react-dom'
-import SecretsModal from './components/SecretsModal'
+import SecretsModal from './modals/SecretsModal'
 import React, { useState, useEffect } from 'react'
 import { ToastContainer, toast } from 'react-toastify'
 
@@ -24,7 +23,7 @@ function Options() {
   useEffect(() => {
     fetchData()
 
-    browser.storage.onChanged.addListener(function(changes, namespace) {
+    browser.storage.onChanged.addListener(function() {
       fetchData()
     });
   }, [])
@@ -88,7 +87,7 @@ function Options() {
   }
 
   const handleResetVault = async () => {
-    if (await confirm("Are you sure you want to reset the vault? Make sure if you have made a backup before you continue.")) {
+    if (confirm("Are you sure you want to reset the vault? Make sure if you have made a backup before you continue.")) {
       await browser.storage.local.set({ 
         encryptedVault: '',
         vault: {},

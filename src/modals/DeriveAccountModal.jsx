@@ -1,7 +1,5 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
-import * as nip19 from 'nostr-tools/nip19'
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
 import { SimplePool } from 'nostr-tools/pool'
 import { finalizeEvent } from 'nostr-tools/pure'

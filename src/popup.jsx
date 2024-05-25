@@ -1,26 +1,23 @@
 import browser from 'webextension-polyfill'
 import {render} from 'react-dom'
 import React, { useState, useEffect } from 'react'
-import CryptoJS from 'crypto-js'
 import * as nip19 from 'nostr-tools/nip19'
-import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
-import { hexToBytes, bytesToHex } from '@noble/hashes/utils'
+import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
+import { hexToBytes } from '@noble/hashes/utils'
 import { encrypt, decrypt } from './common'
-import EditAccountModal from './components/EditAccountModal'
-import ImportAccountModal from './components/ImportAccountModal'
-import AccountDetailsModal from './components/AccountDetailsModal'
-import GenerateRandomAccountModal from './components/GenerateRandomAccountModal'
-import DeriveAccountModal from './components/DeriveAccountModal'
-import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
+import EditAccountModal from './modals/EditAccountModal'
+import ImportAccountModal from './modals/ImportAccountModal'
+import AccountDetailsModal from './modals/AccountDetailsModal'
+import GenerateRandomAccountModal from './modals/GenerateRandomAccountModal'
+import DeriveAccountModal from './modals/DeriveAccountModal'
+import { getPublicKey } from 'nostr-tools/pure'
 import { SimplePool } from 'nostr-tools/pool'
 
 function Popup() {
-  const [masterPassword, setMasterPassword] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [password, setPassword] = useState('')
   const [step, setStep] = useState(1)
-  const [file, setFile] = useState(null)
   const [vault, setVault] = useState({
     mnemonic: '',
     passphrase: '',
@@ -28,15 +25,12 @@ function Popup() {
     accounts: [], // maybe change to derivedAccounts
     importedAccounts: [],
   })
-  const [encryptedVault, setEncryptedVault] = useState('')
   const [accounts, setAccounts] = useState([])
   const [importedAccounts, setImportedAccounts] = useState([])
   const [accountEditing, setAccountEditing] = useState({})
-  const [relay, setRelay] = useState(null)
   const [loaded, setLoaded] = useState(false)
   const [showEditAccountModal, setEditAccountModal] = useState(false)
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
-  const [qrCodeKey, setQRCodeKey] = useState('')
   const [accountDetails, setAccountDetails] = useState({})
   const [showAccountDetails, setShowAccountDetails] = useState(false)
   const [showRandomAccount, setShowRandomAccount] = useState(false)
@@ -161,14 +155,6 @@ function Popup() {
     }))
   }
 
-  const accountEditingChange = (e) => {
-    const { name, value } = e.target;
-    setAccountEditing(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   async function toggleFormat(e, account) {
     e.preventDefault()
     let newFormat = account.format === 'bech32' ? 'hex' : 'bech32'
@@ -279,7 +265,7 @@ function Popup() {
   }
 
   const deleteImportedAccount = async (index) => {
-    if (await confirm("Are you sure you want to delete this account? Make sure if you have made a backup before you continue.")) {
+    if (confirm("Are you sure you want to delete this account? Make sure if you have made a backup before you continue.")) {
       const storage = await browser.storage.local.get(['vault', 'password'])
       const vault = storage.vault
       const newImportedAccounts = [...vault.importedAccounts]
