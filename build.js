@@ -9,8 +9,8 @@ import * as chokidar from 'chokidar'
 const prod = process.argv.indexOf('prod') !== -1
 
 function buildSass() {
-  const sassEntryFile = './extension/assets/css/style.scss';  // Your main Sass file
-  const cssOutputFile = './extension/assets/css/style.build.css'; // Output CSS file
+  const sassEntryFile = './src/assets/css/style.scss';  // Your main Sass file
+  const cssOutputFile = './dist/assets/css/style.build.css'; // Output CSS file
 
   const result = sass.renderSync({
     file: sassEntryFile,
@@ -32,7 +32,7 @@ function buildSass() {
 buildSass()
 
 // Watch for changes in Sass files
-chokidar.watch('./extension/assets/css/*.scss').on('change', (event) => {
+chokidar.watch('./src/assets/css/*.scss').on('change', (event) => {
   console.log(`File ${event} has been changed`)
   buildSass()
 });
@@ -42,13 +42,13 @@ function buildEsbuild() {
     .build({
       bundle: true,
       entryPoints: {
-        'popup.build': './extension/popup.jsx',
-        //'prompt.build': './extension/prompt.jsx',
-        'options.build': './extension/options.jsx',
-        'background.build': './extension/background.js',
-        //'content-script.build': './extension/content-script.js'
+        'popup.build': './src/popup.jsx',
+        //'prompt.build': './src/prompt.jsx',
+        'options.build': './src/options.jsx',
+        'background.build': './src/background.js',
+        //'content-script.build': './src/content-script.js'
       },
-      outdir: './extension',
+      outdir: './dist',
       sourcemap: prod ? false : 'inline',
       define: {
         window: 'self',
@@ -62,7 +62,7 @@ function buildEsbuild() {
 buildEsbuild()
 
 // Watch for changes in Sass files
-chokidar.watch('./extension/**/*.{jsx,jsx}').on('change', (event) => {
+chokidar.watch('./src/**/*.{jsx,jsx}').on('change', (event) => {
   console.log(`File ${event} has been changed`)
   buildEsbuild()
 });
