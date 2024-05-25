@@ -1,10 +1,11 @@
 import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
 import SecretsModal from './modals/SecretsModal'
+import ChangePassword from './components/ChangePassword'
 import React, { useState, useEffect } from 'react'
 import { ToastContainer, toast } from 'react-toastify'
 
-import { encrypt, decrypt } from './common'
+import { decrypt } from './common'
 
 function Options() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -14,11 +15,6 @@ function Options() {
   const [relay, setRelay] = useState('')
   const [relays, setRelays] = useState([])
   const [showSecretsModal, setShowSecretsModal] = useState(false)
-  const [changePassword, setChangePassword] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmNewPassword: '',
-  })
 
   useEffect(() => {
     fetchData()
@@ -127,57 +123,6 @@ function Options() {
     })
   }
 
-  const changePasswordInput = (e) => {
-    const { name, value } = e.target;
-    setChangePassword(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const submitChangePassword = async (e) => {
-    e.preventDefault()
-
-    const confirmChange = confirm("Are you sure you want to change the password?")
-    if (!confirmChange) return
-
-    if (changePassword.newPassword !== changePassword.confirmNewPassword) {
-      alert('New password do not match!')
-
-      setChangePassword({
-        currentPassword: '',
-        newPassword: '',
-        confirmNewPassword: '',
-      })
-
-      return
-    }
-
-    const storage = await browser.storage.local.get(['encryptedVault'])
-    try {
-      const decryptedVault = decrypt(storage.encryptedVault, changePassword.currentPassword) 
-      const encryptedVault = encrypt(decryptedVault, changePassword.newPassword)
-      await browser.storage.local.set({ 
-        encryptedVault,
-        password: changePassword.currentPassword
-      })
-      setChangePassword({
-        currentPassword: '',
-        newPassword: '',
-        confirmNewPassword: '',
-      })
-      fetchData()
-      toast.success("Your password was changed with success")
-    } catch (e) {
-      toast.error("Your password do not match")
-      setChangePassword({
-        currentPassword: '',
-        newPassword: '',
-        confirmNewPassword: '',
-      })
-    }
-  }
-
   return (
     <div className="Options">
       <div className="container">
@@ -228,40 +173,7 @@ function Options() {
 
                 <hr />
 
-                <form onSubmit={submitChangePassword}>
-                  <h2>Change Password</h2>
-                  <input
-                    type="password"
-                    autoComplete="off"
-                    placeholder="Current password"
-                    name="currentPassword"
-                    required
-                    value={changePassword.currentPassword}
-                    onChange={(e) => changePasswordInput(e)}
-                  />
-                  <br />
-                  <input
-                    type="password"
-                    autoComplete="off"
-                    placeholder="New password"
-                    name="newPassword"
-                    required
-                    value={changePassword.newPassword}
-                    onChange={(e) => changePasswordInput(e)}
-                  />
-                  <br />
-                  <input
-                    type="password"
-                    autoComplete="off"
-                    placeholder="Confirm new password"
-                    name="confirmNewPassword"
-                    required
-                    value={changePassword.confirmNewPassword}
-                    onChange={(e) => changePasswordInput(e)}
-                  />
-                  <br />
-                  <button type="submit" className="btn">Change password</button>
-                </form>
+                <ChangePassword fetchData={fetchData} />
               </>
             )}
 
