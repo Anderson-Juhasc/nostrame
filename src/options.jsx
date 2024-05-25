@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill'
-import {render} from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import SecretsModal from './modals/SecretsModal'
 import React, { useState, useEffect } from 'react'
 import { ToastContainer, toast } from 'react-toastify'
@@ -306,4 +306,6 @@ function Options() {
 
 }
 
-render(<Options />, document.getElementById('main'))
+const container = document.getElementById('main')
+const root = createRoot(container) // createRoot(container!) if you use TypeScript
+root.render(<Options />)

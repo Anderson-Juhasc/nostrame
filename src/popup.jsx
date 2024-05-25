@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill'
-import {render} from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
@@ -38,7 +38,7 @@ function Popup() {
 
   const pool = new SimplePool()
 
-  useEffect(async () => {
+  useEffect(() => {
     fetchData()
   }, []);
 
@@ -100,7 +100,6 @@ function Popup() {
       }
 
       setVault(storage.vault)
-      setEncryptedVault(storage.encryptedVault)
 
       let relays = storage.relays
       let events = await pool.querySync(relays, { kinds: [0], authors })
@@ -594,4 +593,6 @@ function Popup() {
   );
 }
 
-render(<Popup />, document.getElementById('main'))
+const container = document.getElementById('main')
+const root = createRoot(container) // createRoot(container!) if you use TypeScript
+root.render(<Popup />)
