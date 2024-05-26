@@ -1,18 +1,18 @@
 import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
-import SecretsModal from './modals/SecretsModal'
+import React, { useState, useEffect } from 'react'
+import { ToastContainer } from 'react-toastify'
+
 import ChangePassword from './components/ChangePassword'
 import ResetVault from './components/ResetVault'
 import Relays from './components/Relays'
 import ImportVault from './components/ImportVault'
-import React, { useState, useEffect } from 'react'
-import { ToastContainer } from 'react-toastify'
 import ExportVault from './components/ExportVault'
+import Secrets from './components/Secrets'
 
 function Options() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
-  const [showSecretsModal, setShowSecretsModal] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -42,13 +42,7 @@ function Options() {
 
                 <hr />
 
-                <h2>Security</h2>
-                <button onClick={() => setShowSecretsModal(true)}>Show secrets</button>
-
-                <SecretsModal 
-                  isOpen={showSecretsModal}
-                  onClose={() => setShowSecretsModal(false)}
-                ></SecretsModal>
+                <Secrets />
 
                 <hr />
 
