@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
 import SecretsModal from './modals/SecretsModal'
 import ChangePassword from './components/ChangePassword'
+import Relays from './components/Relays'
 import React, { useState, useEffect } from 'react'
 import { ToastContainer, toast } from 'react-toastify'
 
@@ -12,8 +13,6 @@ function Options() {
   const [isLocked, setIsLocked] = useState(false)
   const [file, setFile] = useState(null)
   const [password, setPassword] = useState('')
-  const [relay, setRelay] = useState('')
-  const [relays, setRelays] = useState([])
   const [showSecretsModal, setShowSecretsModal] = useState(false)
 
   useEffect(() => {
@@ -25,11 +24,10 @@ function Options() {
   }, [])
 
   const fetchData = async () => {
-    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked', 'defaultRelay', 'relays'])
+    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked'])
 
     setIsLocked(storage.isLocked)
     setIsAuthenticated(storage.isAuthenticated)
-    setRelays(storage.relays)
   }
 
   const handleFileChange = (e) => {
@@ -94,35 +92,6 @@ function Options() {
     }
   }
 
-  const addNewRelay = async (e) => {
-    e.preventDefault()
-
-    const relayExist = relays.find(item => item === relay)
-    if (relayExist) {
-      alert('Please provide a not existing relay')
-      setRelay('')
-      return false
-    }
-
-    relays.push(relay)
-    setRelays(relays)
-    setRelay('')
-    await browser.storage.local.set({ 
-      relays: relays,
-    })
-  }
-
-  const removeRelay = async (index) => {
-    const newRelays = [...relays]
-    if (index !== -1) {
-      newRelays.splice(index, 1)
-      setRelays(newRelays)
-    }
-    await browser.storage.local.set({ 
-      relays: newRelays,
-    })
-  }
-
   return (
     <div className="Options">
       <div className="container">
@@ -147,29 +116,7 @@ function Options() {
 
                 <hr />
 
-                <form onSubmit={addNewRelay}>
-                  <h2>Relays</h2>
-                  <input 
-                    type="text"
-                    name="relay"
-                    value={relay}
-                    required
-                    pattern="^wss:\/\/([a-zA-Z0-9\-\.]+)(:[0-9]+)?(\/[a-zA-Z0-9\-\.\/\?\:@&=%\+\/~#]*)?$"
-                    onChange={(e) => setRelay(e.target.value)}
-                  />
-                  <br />
-                  <button type="submit" className="btn">Add</button>
-                </form>
-
-                <ul>
-                  {relays.map((relay, index) => (
-                    <li key={index}>
-                      {relay}
-                      &nbsp;
-                      <button type="button" onClick={() => removeRelay(index)}>&times;</button>
-                    </li>
-                  ))}
-                </ul>
+                <Relays />
 
                 <hr />
 
