@@ -7,6 +7,7 @@ import Relays from './components/Relays'
 import ImportVault from './components/ImportVault'
 import React, { useState, useEffect } from 'react'
 import { ToastContainer } from 'react-toastify'
+import ExportVault from './components/ExportVault'
 
 function Options() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -28,26 +29,6 @@ function Options() {
     setIsAuthenticated(storage.isAuthenticated)
   }
 
-  const handleVaultExport = async () => {
-    const storage = await browser.storage.local.get(['encryptedVault'])
-    const jsonData = JSON.stringify({ vault: storage.encryptedVault }, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = ('0' + (currentDate.getMonth() + 1)).slice(-2); // Adding 1 to month since it's zero-based
-    const day = ('0' + currentDate.getDate()).slice(-2);
-    const hours = ('0' + currentDate.getHours()).slice(-2);
-    const minutes = ('0' + currentDate.getMinutes()).slice(-2);
-    const seconds = ('0' + currentDate.getSeconds()).slice(-2);
-
-    a.href = url;
-    a.download = `NostrameVaultData.${year}_${month}_${day}_${hours}_${minutes}_${seconds}.json`;
-    a.click();
-  }
-
   return (
     <div className="Options">
       <div className="container">
@@ -57,8 +38,7 @@ function Options() {
           <>
             { isAuthenticated && (
               <>
-                <h2>Export backup</h2>
-                <button type="button" onClick={handleVaultExport}>Export backup</button>
+                <ExportVault />
 
                 <hr />
 
