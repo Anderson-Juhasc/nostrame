@@ -2,17 +2,15 @@ import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
 import SecretsModal from './modals/SecretsModal'
 import ChangePassword from './components/ChangePassword'
+import ResetVault from './components/ResetVault'
 import Relays from './components/Relays'
+import ImportVault from './components/ImportVault'
 import React, { useState, useEffect } from 'react'
-import { ToastContainer, toast } from 'react-toastify'
-
-import { decrypt } from './common'
+import { ToastContainer } from 'react-toastify'
 
 function Options() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
-  const [file, setFile] = useState(null)
-  const [password, setPassword] = useState('')
   const [showSecretsModal, setShowSecretsModal] = useState(false)
 
   useEffect(() => {
@@ -28,12 +26,6 @@ function Options() {
 
     setIsLocked(storage.isLocked)
     setIsAuthenticated(storage.isAuthenticated)
-  }
-
-  const handleFileChange = (e) => {
-    e.preventDefault()
-    const file = event.target.files[0]
-    setFile(file)
   }
 
   const handleVaultExport = async () => {
@@ -54,42 +46,6 @@ function Options() {
     a.href = url;
     a.download = `NostrameVaultData.${year}_${month}_${day}_${hours}_${minutes}_${seconds}.json`;
     a.click();
-  }
-
-  const handleVaultImport = (e) => {
-    e.preventDefault()
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const encryptedVault = (JSON.parse(reader.result)).vault
-        try {
-          const vaultData = decrypt(encryptedVault, password) 
-          await browser.storage.local.set({ 
-            vault: vaultData,
-            encryptedVault,
-            isAuthenticated: true,
-            password
-          })
-          setPassword('')
-          fetchData()
-        } catch (e) {
-          console.log(e)
-        }
-      }
-      reader.readAsText(file)
-    }
-  }
-
-  const handleResetVault = async () => {
-    if (confirm("Are you sure you want to reset the vault? Make sure if you have made a backup before you continue.")) {
-      await browser.storage.local.set({ 
-        encryptedVault: '',
-        vault: {},
-        password: '',
-        isAuthenticated: false,
-      })
-      fetchData()
-    }
   }
 
   return (
@@ -126,32 +82,13 @@ function Options() {
 
             { !isAuthenticated && (
               <>
-                <h2>Import backup</h2>
-
-                <form onSubmit={handleVaultImport}>
-                  <input type="file" required onChange={handleFileChange} />
-                  <br />
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    name="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <br />
-                  <button type="submit" className="btn">Import backup</button>
-                </form>
+                <ImportVault fetchData={fetchData} />
                 <hr />
               </>
             )}
 
             { isAuthenticated && (
-              <>
-                <h2>Reset Vault</h2>
-
-                <button type="button" onClick={handleResetVault}>Reset Vault</button>
-              </>
+              <ResetVault fetchData={fetchData} />
             )}
           </>
         ) : (
