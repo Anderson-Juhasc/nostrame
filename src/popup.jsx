@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
-import React, { useState, useEffect, useAsync, memo } from 'react'
+import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { hexToBytes } from '@noble/hashes/utils'
