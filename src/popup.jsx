@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useAsync, memo } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { hexToBytes } from '@noble/hashes/utils'
@@ -10,6 +10,7 @@ import ImportAccountModal from './modals/ImportAccountModal'
 import AccountDetailsModal from './modals/AccountDetailsModal'
 import GenerateRandomAccountModal from './modals/GenerateRandomAccountModal'
 import DeriveAccountModal from './modals/DeriveAccountModal'
+import getIdenticon from './helpers/identicon'
 import { getPublicKey } from 'nostr-tools/pure'
 import { SimplePool } from 'nostr-tools/pool'
 
@@ -104,14 +105,14 @@ function Popup() {
       let relays = storage.relays
       let events = await pool.querySync(relays, { kinds: [0], authors })
 
-      events.forEach((item) => {
+      events.forEach(async (item) => {
         let content = JSON.parse(item.content)
         let len = loadAccounts.length
         for (let i = 0; i < len; i++) {
           if (loadAccounts[i].pubKey === item.pubkey) {
             loadAccounts[i].name = content.display_name
             loadAccounts[i].about = content.about
-            loadAccounts[i].picture = content.picture
+            loadAccounts[i].picture = !content.picture || content.picture === '' ? await UserIdenticon(loadAccounts[i].pubKey) : content.picture
             loadAccounts[i].nip05 = content.nip05
             loadAccounts[i].lud16 = content.lud16
           }
@@ -125,6 +126,13 @@ function Popup() {
       setImportedAccounts(iAccounts)
       setLoaded(true)
     }
+  }
+
+  const UserIdenticon = async ( pubkey ) => {
+    const identicon = await getIdenticon(pubkey)
+    console.log(`data:image/svg+xml;base64,${identicon}`)
+
+    return `data:image/svg+xml;base64,${identicon}`
   }
 
   const hideStringMiddle = (inputString, startChars = 10, endChars = 8) => {
@@ -454,7 +462,9 @@ function Popup() {
                   {accounts.map((account, index) => (
                     <div key={index} className="card">
                       <header className="card-head">
-                        <div className="title">
+                        <div className="card-title" style={{ display: 'flex', alignItems: 'center' }}>
+                          <img src={account.picture} width="30" style={{ borderRadius: '50%' }} />
+                          &nbsp;
                           <strong>{account.name ? account.name : 'Account ' + index}:</strong>
                           &nbsp;
                           <a href="#" onClick={(e) => toggleFormat(e, account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
@@ -507,7 +517,9 @@ function Popup() {
                   {importedAccounts.map((account, index) => (
                     <div key={index} className="card">
                       <header className="card-head">
-                        <div className="card-title">
+                        <div className="card-title" style={{ display: 'flex', alignItems: 'center' }}>
+                          <img src={account.picture} width="30" style={{ borderRadius: '50%' }} />
+                          &nbsp;
                           <strong>{account.name ? account.name : 'Account ' + index}:</strong>
                           &nbsp;
                           <a href="#" onClick={(e) => toggleFormat(e, account)} title={account.format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
