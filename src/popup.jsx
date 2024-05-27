@@ -2,7 +2,6 @@ import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
 import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
-import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { hexToBytes } from '@noble/hashes/utils'
 import { encrypt, decrypt } from './common'
 import EditAccountModal from './modals/EditAccountModal'
@@ -10,6 +9,7 @@ import ImportAccountModal from './modals/ImportAccountModal'
 import AccountDetailsModal from './modals/AccountDetailsModal'
 import GenerateRandomAccountModal from './modals/GenerateRandomAccountModal'
 import DeriveAccountModal from './modals/DeriveAccountModal'
+import Login from './components/Login'
 import getIdenticon from './helpers/identicon'
 import { getPublicKey } from 'nostr-tools/pure'
 import { SimplePool } from 'nostr-tools/pool'
@@ -18,14 +18,6 @@ function Popup() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [password, setPassword] = useState('')
-  const [step, setStep] = useState(1)
-  const [vault, setVault] = useState({
-    mnemonic: '',
-    passphrase: '',
-    accountIndex: 0,
-    accounts: [], // maybe change to derivedAccounts
-    importedAccounts: [],
-  })
   const [accounts, setAccounts] = useState([])
   const [importedAccounts, setImportedAccounts] = useState([])
   const [accountEditing, setAccountEditing] = useState({})
@@ -36,6 +28,13 @@ function Popup() {
   const [showAccountDetails, setShowAccountDetails] = useState(false)
   const [showRandomAccount, setShowRandomAccount] = useState(false)
   const [showDeriveAccount, setShowDeriveAccount] = useState(false)
+  const [vault, setVault] = useState({
+    mnemonic: '',
+    passphrase: '',
+    accountIndex: 0,
+    accounts: [], // maybe change to derivedAccounts
+    importedAccounts: [],
+  })
 
   const pool = new SimplePool()
 
@@ -72,6 +71,7 @@ function Popup() {
             nsec,
             pubKey,
             npub,
+            picture: await UserIdenticon(pubKey),
             format: 'bech32',
             type: 'derived',
           }
@@ -94,6 +94,7 @@ function Popup() {
             nsec,
             pubKey,
             npub,
+            picture: await UserIdenticon(pubKey),
             format: 'bech32',
             type: 'imported',
           }
@@ -112,7 +113,7 @@ function Popup() {
           if (loadAccounts[i].pubKey === item.pubkey) {
             loadAccounts[i].name = content.display_name
             loadAccounts[i].about = content.about
-            loadAccounts[i].picture = !content.picture || content.picture === '' ? await UserIdenticon(loadAccounts[i].pubKey) : content.picture
+            loadAccounts[i].picture = !content.picture || content.picture === '' ? loadAccounts[i].picture : content.picture
             loadAccounts[i].nip05 = content.nip05
             loadAccounts[i].lud16 = content.lud16
           }
@@ -130,7 +131,6 @@ function Popup() {
 
   const UserIdenticon = async ( pubkey ) => {
     const identicon = await getIdenticon(pubkey)
-    console.log(`data:image/svg+xml;base64,${identicon}`)
 
     return `data:image/svg+xml;base64,${identicon}`
   }
@@ -154,14 +154,6 @@ function Popup() {
     navigator.clipboard.writeText(text)
   }
   
-  const handleVaultChange = (e) => {
-    const { name, value } = e.target;
-    setVault(prevVault => ({
-      ...prevVault,
-      [name]: value
-    }))
-  }
-
   async function toggleFormat(e, account) {
     e.preventDefault()
     let newFormat = account.format === 'bech32' ? 'hex' : 'bech32'
@@ -178,44 +170,6 @@ function Popup() {
       prevAccounts[account.index]['format'] = newFormat
       return [...prevAccounts]
     })
-  }
-
-  async function createNewAccount(e) {
-    e.preventDefault()
-    setStep(3)
-    let mnemonic = generateSeedWords()
-    setVault({
-      ...vault,
-      mnemonic: mnemonic
-    })
-  }
-
-  async function saveAccount(e) {
-    e.preventDefault()
-
-    const vaultData = {
-      mnemonic: vault.mnemonic,
-      passphrase: vault.passphrase,
-      accountIndex: 0,
-      accounts: [],
-      importedAccounts: [],
-    }
-
-    const prvKey = privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex)
-    vaultData.accounts.push({
-      prvKey,
-    })
-
-    const encryptedVault = encrypt(vaultData, password)
-    await browser.storage.local.set({ 
-      vault: vaultData,
-      encryptedVault,
-      isAuthenticated: true,
-      password
-    })
-    setStep(1)
-    setPassword('')
-    fetchData()
   }
 
   const openOptionsButton = async () => {
@@ -291,103 +245,7 @@ function Popup() {
   }
 
   if (!isAuthenticated) {
-    switch (step) {
-      case 1: 
-        return (
-          <div className="Popup">
-            <div className="container">
-              <h1>Nostrame</h1>
-              <button type="button" className="btn" onClick={() => setStep(2)}>I have an account</button>
-              <br />
-              <button type="button" className="btn" onClick={openOptionsButton}>Import backup</button>
-              <br />
-              <button type="button" className="btn" onClick={createNewAccount}>Create new account</button>
-            </div>
-          </div>
-        )
-      case 2: 
-        return (
-          <div className="Popup">
-            <div className="container">
-              <form onSubmit={saveAccount}>
-                <h1>Create new account</h1>
-                <textarea
-                  rows="2"
-                  placeholder="Mnemonic"
-                  name="mnemonic"
-                  required
-                  value={vault.mnemonic}
-                  onChange={handleVaultChange}
-                ></textarea>
-                <br />
-                <input
-                  type="text"
-                  autoComplete="off"
-                  placeholder="Passphrase"
-                  name="passphrase"
-                  value={vault.passphrase}
-                  onChange={handleVaultChange}
-                />
-                <br />
-                <input
-                  type="password"
-                  autoComplete="off"
-                  placeholder="Password"
-                  name="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <br />
-                <button type="submit" className="btn">Save</button>
-                <br />
-                <button type="button" className="btn" onClick={() => { setStep(1); setVault({...vault, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
-              </form>
-            </div>
-          </div>
-        )
-      case 3: 
-        return (
-          <div className="Popup">
-            <div className="container">
-              <form onSubmit={saveAccount}>
-                <h1>Create new account</h1>
-                <textarea
-                  rows="2"
-                  placeholder="Mnemonic"
-                  name="mnemonic"
-                  required
-                  value={vault.mnemonic}
-                  onChange={handleVaultChange}
-                ></textarea>
-                <br />
-                <input
-                  type="password"
-                  autoComplete="off"
-                  placeholder="Passphrase"
-                  name="passphrase"
-                  value={vault.passphrase}
-                  onChange={handleVaultChange}
-                />
-                <br />
-                <input
-                  type="password"
-                  autoComplete="off"
-                  placeholder="Password"
-                  name="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <br />
-                <button type="submit" className="btn">Save</button>
-                <br />
-                <button type="button" className="btn" onClick={() => { setStep(1); setVault({...vault, mnemonic: '', passphrase: '' }); setPassword('') } }>Back</button>
-              </form>
-            </div>
-          </div>
-        )
-    }
+    return <Login fetchData={fetchData} />
   }
 
   return (
