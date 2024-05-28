@@ -463,8 +463,20 @@ label {
 }
 
 .btn {
+  background-color: #9b59b6; /* Purple color */
+  color: #fff; /* White text */
   display: block;
+  padding: 5px 10px; /* Padding */
+  border: none; /* No border */
+  border-radius: 5px; /* Rounded corners */
+  text-align: center; /* Center text */
+  text-decoration: none; /* Remove underline */
+  transition: background-color 0.3s ease; /* Smooth transition */
   width: 100%;
+}
+
+.btn:hover {
+  background-color: #c39bd3; /* Lighter shade of purple on hover */
 }
 
 .modal-overlay {
