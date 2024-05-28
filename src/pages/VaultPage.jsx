@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
 import { hexToBytes } from '@noble/hashes/utils'
 import ImportAccountModal from '../modals/ImportAccountModal'
-import GenerateRandomAccountModal from '../modals/GenerateRandomAccountModal'
 import DeriveAccountModal from '../modals/DeriveAccountModal'
 import LockedVault from '../components/LockedVault'
 import getIdenticon from '../helpers/identicon'
 import { getPublicKey } from 'nostr-tools/pure'
 import { SimplePool } from 'nostr-tools/pool'
 import AccountListings from '../components/AccountListings'
+import HeaderVault from '../components/HeaderVault'
 
 const VaultPage = () => {
   const [isLocked, setIsLocked] = useState(false)
@@ -17,7 +17,6 @@ const VaultPage = () => {
   const [importedAccounts, setImportedAccounts] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
-  const [showRandomAccount, setShowRandomAccount] = useState(false)
   const [showDeriveAccount, setShowDeriveAccount] = useState(false)
 
   const pool = new SimplePool()
@@ -119,36 +118,15 @@ const VaultPage = () => {
     return `data:image/svg+xml;base64,${identicon}`
   }
 
-  const openOptionsButton = async () => {
-    if (browser.runtime.openOptionsPage) {
-      browser.runtime.openOptionsPage()
-    } else {
-      window.open(browser.runtime.getURL('options.html'))
-    }
-  }
-
-  const lockVault = async () => {
-    setIsLocked(true)
-    setAccounts([])
+  const deriveAccountCallback = () => {
     setLoaded(false)
-    await browser.storage.local.set({ 
-      isLocked: true,
-      vault: {
-        accounts: [],
-      },
-      password: '',
-    })
+    setShowDeriveAccount(false)
+    fetchData()
   }
 
   const importAccountCallback = () => {
     setLoaded(false)
     setShowImportAccountModal(false)
-    fetchData()
-  }
-
-  const deriveAccountCallback = () => {
-    setLoaded(false)
-    setShowDeriveAccount(false)
     fetchData()
   }
 
@@ -162,25 +140,12 @@ const VaultPage = () => {
         <>
           {loaded ? (
             <>
-              <div className="header">
-                <h1>
-                  Nostrame
-                </h1>
-
-                <div>
-                  <a href="#" onClick={(e) => { e.preventDefault(); lockVault() }} title="Lock now">
-                    <i className="icon-lock"></i>
-                  </a>
-                  &nbsp;
-                  <a href="#" onClick={(e) => { e.preventDefault(); setShowRandomAccount(true) }} title="Generate random account">
-                    <i className="icon-loop2"></i>
-                  </a>
-                  &nbsp;
-                  <a href="#" onClick={(e) => { e.preventDefault(); openOptionsButton() }} title="Options">
-                    <i className="icon-cog"></i>
-                  </a>
-                </div>
-              </div>
+              <HeaderVault
+                setAccounts={() => setAccounts([])}
+                setIsLocked={() => setIsLocked(true)}
+                setLoaded={() => setLoaded(false)}
+                fetchData={fetchData}
+              />
               <div>
                 <div className="container">
                   <div className="card-head">
@@ -212,7 +177,12 @@ const VaultPage = () => {
                   </div>
                 </div>
                 <div>
-                  <AccountListings accountsData={importedAccounts} type="imported" fetchData={fetchData} reloadData={() => {setLoaded(false)}} />
+                  <AccountListings 
+                    accountsData={importedAccounts}
+                    type="imported"
+                    fetchData={fetchData}
+                    reloadData={() => setLoaded(false)}
+                  />
                 </div>
               </div>
             </>
@@ -230,12 +200,6 @@ const VaultPage = () => {
             callBack={importAccountCallback}
             onClose={() => setShowImportAccountModal(false)}
           ></ImportAccountModal>
-
-          <GenerateRandomAccountModal 
-            isOpen={showRandomAccount}
-            callBack={importAccountCallback}
-            onClose={() => setShowRandomAccount(false)}
-          ></GenerateRandomAccountModal>
 
           <DeriveAccountModal 
             isOpen={showDeriveAccount}
