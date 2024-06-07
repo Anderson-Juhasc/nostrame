@@ -7,6 +7,7 @@ import * as sass from 'sass'
 import * as chokidar from 'chokidar'
 
 const prod = process.argv.indexOf('prod') !== -1
+const watch = process.argv.indexOf('watch') !== -1
 
 function buildSass() {
   const sassEntryFile = './src/assets/css/style.scss';  // Your main Sass file
@@ -30,12 +31,6 @@ function buildSass() {
 
 // Build Sass initially
 buildSass()
-
-// Watch for changes in Sass files
-chokidar.watch('./src/assets/css/*.scss').on('change', (event) => {
-  console.log(`File ${event} has been changed`)
-  buildSass()
-});
 
 function buildEsbuild() {
   esbuild
@@ -61,8 +56,16 @@ function buildEsbuild() {
 // Build esbuild and watch for changes
 buildEsbuild()
 
-// Watch for changes in Sass files
-chokidar.watch('./src/**/*.{jsx,jsx}').on('change', (event) => {
-  console.log(`File ${event} has been changed`)
-  buildEsbuild()
-});
+if (watch) {
+  // Watch for changes in Sass files
+  chokidar.watch('./src/**/*.{jsx,jsx}').on('change', (event) => {
+    console.log(`File ${event} has been changed`)
+    buildEsbuild()
+  });
+
+  // Watch for changes in Sass files
+  chokidar.watch('./src/assets/css/*.scss').on('change', (event) => {
+    console.log(`File ${event} has been changed`)
+    buildSass()
+  });
+}

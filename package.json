@@ -16,8 +16,8 @@
   },
   "scripts": {
     "build": "./build.js prod",
-    "watch": "node ./build.js",
-    "package": "./build.js prod; cd extension; zip -r archive *; cd ..; mv extension/archive.zip ./nostrame.zip"
+    "watch": "node ./build.js watch",
+    "package": "./build.js prod; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nostrame.zip"
   },
   "devDependencies": {
     "chokidar": "^3.6.0",
