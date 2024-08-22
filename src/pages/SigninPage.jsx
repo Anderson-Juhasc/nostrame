@@ -1,8 +1,7 @@
 import browser from 'webextension-polyfill'
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { encrypt } from '../common'
 import { useAuth } from '../middlewares/AuthContext';
 
@@ -21,6 +20,15 @@ const Signin = () => {
 
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    browser.storage.onChanged.addListener(async function(changes, area) {
+      if (changes.isAuthenticated) {
+        await login()
+        navigate('/vault')
+      }
+    })
+  }, [])
 
   const handleVaultChange = (e) => {
     const { name, value } = e.target;
@@ -59,12 +67,23 @@ const Signin = () => {
     return navigate('/vault')
   }
 
+  const openOptionsButton = async () => {
+    if (browser.runtime.openOptionsPage) {
+      browser.runtime.openOptionsPage()
+    } else {
+      window.open(browser.runtime.getURL('options.html'))
+    }
+  }
+
   return (
     <>
       <div className="Popup">
         <div className="container">
           <form onSubmit={saveAccount}>
-            <h1>Set existing Vault</h1>
+            <h1>Import Vault</h1>
+            <br />
+            <button type="button" className="btn" onClick={openOptionsButton}>Import JSON file</button>
+            <br />
             <textarea
               rows="2"
               placeholder="Mnemonic"

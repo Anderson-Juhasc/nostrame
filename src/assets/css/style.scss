@@ -392,19 +392,154 @@ body {
   color: #fff;
   font-family: Arial, sans-serif;
   font-size: 16px;
+  margin: 0 auto;
+  position: relative;
+  height: 600px;
+  width: 357px;
 }
 
 .header {
-  background-color: #333;
+  background-color: #9b59b6;
   color: #fff;
-  padding: 10px 15px;
+  padding: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  h1 {
+    margin: 0;
+  }
+
+  a {
+    color: #fff;
+
+    &:hover {
+      color: rgba(#fff, .7);
+    }
+  }
 }
-.header > h1 {
-  color: #9b59b6;
+
+.header-nav {
+}
+
+.account {
+  position: relative;
+}
+
+.account-dropdown {
+  background: #5d5d5d;
+  padding: 15px;
+  position: absolute;
+  right: 0;
+  z-index: 1000;
+}
+
+.account-dropdown__item {
+  &:hover {
+    background: rgba(#333, .7);
+  }
+  &.current {
+    background: #333;
+  }
+}
+
+.account-items {
+  border: 1px solid rgba(#fff, .6);
+  overflow-y: scroll;
+  height: 150px;
+}
+
+.account-dropdown__head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.account-dropdown-nav {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+
+  > li {
+    margin-bottom: 5px;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.account-profile {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+}
+
+.account-profile__body {
+  flex: 1;
+  text-align: right;
+}
+
+.account-dropdown__item {
+  padding: 5px 10px;
+}
+
+.account-profile__img {
+  border-radius: 50%;
+  display: block;
+  height: 35px;
+  margin-left: 5px;
+  width: 35px;
+}
+
+.profile {
+  padding: 100px 10px 15px;
+  position: relative;
+}
+
+.profile__banner {
+  background: url('../../assets/img/store-banner.jpeg');
+  background-position: center;
+  background-size: contain;
+  height: 100px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.profile__img {
+  border-radius: 50%,;
+  border: 3px solid #fff;
+  margin-bottom: 10px;
+  width: 100px;
+  height: 100px;
+}
+
+.profile__body {
+  line-height: 1.25rem;
+  margin-top: -53px;
+  position: relative;
+}
+
+.profile__nav {
+  list-style: none;
   margin: 0;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  top: 62px;
+  text-align: center;
+
+  > li {
+    display: inline-block;
+    margin-left: 10px;
+    width: 16px;
+
+    > a {
+      color: #fff;
+      display: block;
+    }
+  }
 }
 
 .Popup {
@@ -442,6 +577,7 @@ body {
   white-space: pre-wrap;
 }
 
+textarea,
 input[type="text"],
 input[type="password"] {
   display: block;
@@ -553,4 +689,55 @@ label {
 /* Show the dropdown menu on hover */
 .dropdown:hover .dropdown-content {
   display: block;
+}
+
+
+.foot {
+  background-color: #5d5d5d;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+
+.foot-nav {
+  display: flex;
+  font-size: 12px;
+  justify-content: space-around;
+  align-items: center;
+  color: #fff;
+  margin: 0;
+  padding: 15px 10px;
+  text-align: center;
+
+  i {
+    display: inline-block;
+    font-size: 16px;
+    margin-bottom: 5px;
+  }
+}
+
+.foot-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.foot-nav li {
+  display: block;
+  width: 100%;
+}
+
+.foot-nav a {
+  color: #fff;
+  display: block;
+  text-decoration: none;
+}
+
+.tabs-nav {
+  padding: 10px 10px 0;
+}
+
+.tabs-content {
+  padding: 10px;
 }

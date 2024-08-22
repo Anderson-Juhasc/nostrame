@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'icomoon';
-  src:  url('../fonts/icomoon.eot?rw1199');
-  src:  url('../fonts/icomoon.eot?rw1199#iefix') format('embedded-opentype'),
-    url('../fonts/icomoon.ttf?rw1199') format('truetype'),
-    url('../fonts/icomoon.woff?rw1199') format('woff'),
-    url('../fonts/icomoon.svg?rw1199#icomoon') format('svg');
+  src:  url('../onts/icomoon.eot?z8ca6h');
+  src:  url('../fonts/icomoon.eot?z8ca6h#iefix') format('embedded-opentype'),
+    url('../fonts/icomoon.ttf?z8ca6h') format('truetype'),
+    url('../fonts/icomoon.woff?z8ca6h') format('woff'),
+    url('../fonts/icomoon.svg?z8ca6h#icomoon') format('svg');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -25,6 +25,24 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.icon-wallet:before {
+  content: "\e901";
+}
+.icon-money:before {
+  content: "\e901";
+}
+.icon-wallet1:before {
+  content: "\e902";
+}
+.icon-money1:before {
+  content: "\e902";
+}
+.icon-cash:before {
+  content: "\e902";
+}
+.icon-wallet2:before {
+  content: "\e903";
+}
 .icon-dots-three-vertical:before {
   content: "\e900";
 }
@@ -147,4 +165,16 @@
 }
 .icon-svg:before {
   content: "\eae9";
+}
+.icon-home:before {
+  content: "\e904";
+}
+.icon-home3:before {
+  content: "\e906";
+}
+.icon-user:before {
+  content: "\e971";
+}
+.icon-user-plus:before {
+  content: "\e973";
 }

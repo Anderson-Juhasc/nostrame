@@ -1,11 +1,17 @@
 import browser from 'webextension-polyfill'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
+import { useNavigate } from 'react-router-dom';
 import * as nip19 from 'nostr-tools/nip19'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
 import { encrypt } from '../common'
 import Modal from './Modal'
+import MainContext from '../contexts/MainContext'
 
 const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
+  const { updateAccounts } = useContext(MainContext)
+
+  const navigate = useNavigate()
+  
   const [showModal, setShowModal] = useState(isOpen)
   const [prvKey, setPrvKey] = useState('')
 
@@ -39,12 +45,17 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
             return false
           }
           vault.importedAccounts.push({ prvKey: prvKeyHex })
+          vault.accountDefault = prvKeyHex
           const encryptedVault = encrypt(vault, storage.password)
           await browser.storage.local.set({ 
             vault,
             encryptedVault,
           })
+          await updateAccounts()
+
           callBack()
+
+          navigate('/vault')
         }
       } catch (e) {
         console.log(e)
@@ -65,13 +76,17 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         }
 
         vault.importedAccounts.push({ prvKey: prvKeyHex })
+        vault.accountDefault = prvKeyHex
         const encryptedVault = encrypt(vault, storage.password)
         await browser.storage.local.set({ 
           vault,
           encryptedVault,
         })
+        await updateAccounts()
 
         callBack()
+
+        navigate('/vault')
       } catch (e) {
         console.log(e)
         alert('Please provide a valid private key')

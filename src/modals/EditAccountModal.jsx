@@ -1,8 +1,8 @@
 import browser from 'webextension-polyfill'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
 import { SimplePool } from 'nostr-tools/pool'
 import { finalizeEvent } from 'nostr-tools/pure'
-import Modal from './Modal';
+import Modal from './Modal'
 
 const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
   const pool = new SimplePool()
@@ -12,6 +12,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
     name: '',
     about: '',
     picture: '',
+    banner: '',
     nip05: '',
     lud16: '',
   });
@@ -22,6 +23,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
       name: accountData.name || '',
       about: accountData.about || '',
       picture: accountData.picture || '',
+      banner: accountData.banner || '',
       nip05: accountData.nip05 || '',
       lud16: accountData.lud16 || '',
     })
@@ -50,24 +52,29 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
 
     let relays = storage.relays
 
-    let event = {
-      kind: 0,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [],
-      content: JSON.stringify({
-        name: account.name, 
-        display_name: account.name,
-        about: account.about,
-        picture: account.picture,
-        nip05: account.nip05,
-        lud16: account.lud16,
-      }),
-    }
+    try {
+      let event = {
+        kind: 0,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: JSON.stringify({
+          name: account.name, 
+          display_name: account.name,
+          about: account.about,
+          picture: account.picture,
+          banner: account.banner,
+          nip05: account.nip05,
+          lud16: account.lud16,
+        }),
+      }
 
-    const signedEvent = finalizeEvent(event, accountData.prvKey)
-    await Promise.any(pool.publish(relays, signedEvent))
-    
-    callBack()
+      const signedEvent = finalizeEvent(event, accountData.prvKey)
+      await Promise.any(pool.publish(relays, signedEvent))
+      
+      callBack()
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   return (
@@ -84,21 +91,30 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
             onChange={accountChange}
           />
           <br />
-          <input
-            type="text"
+          <textarea
+            rows="3"
             autoComplete="off"
             placeholder="About"
             name="about"
             value={account.about}
             onChange={accountChange}
-          />
+          ></textarea>
           <br />
           <input
             type="text"
             autoComplete="off"
             placeholder="Picture url"
             name="picture"
-            value={account.picture}
+            value={account.picture.startsWith('data:image/svg') ? '' : account.picture}
+            onChange={accountChange}
+          />
+          <br />
+          <input
+            type="text"
+            autoComplete="off"
+            placeholder="Banner url"
+            name="banner"
+            value={account.banner}
             onChange={accountChange}
           />
           <br />

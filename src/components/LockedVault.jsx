@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { decrypt } from '../common'
 
-const LockedVault = ({ fetchData }) => {
+const LockedVault = () => {
   const [password, setPassword] = useState('')
 
   const unlockVault = async (e) => {
@@ -15,11 +15,11 @@ const LockedVault = ({ fetchData }) => {
       password,
     })
     setPassword('')
-    fetchData()
+    window.location.reload()
   }
 
   return (
-    <>
+    <div className="Popup">
       <div className="header">
         <h1>Nostrame</h1>
       </div>
@@ -46,7 +46,7 @@ const LockedVault = ({ fetchData }) => {
           </button>
         </form>
       </div>
-    </>
+    </div>
   )
 }
 export default LockedVault

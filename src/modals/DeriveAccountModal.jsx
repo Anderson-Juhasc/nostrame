@@ -1,12 +1,15 @@
 import browser from 'webextension-polyfill'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
 import { SimplePool } from 'nostr-tools/pool'
 import { finalizeEvent } from 'nostr-tools/pure'
 import { encrypt } from '../common'
 import Modal from './Modal'
+import MainContext from '../contexts/MainContext'
 
 const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
+  const { updateAccounts } = useContext(MainContext)
+
   const [showModal, setShowModal] = useState(isOpen)
   const [name, setName] = useState('')
 
@@ -30,11 +33,7 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     vault.accounts.push({
       prvKey,
     })
-    const encryptedVault = encrypt(vault, storage.password)
-    await browser.storage.local.set({ 
-      vault,
-      encryptedVault,
-    })
+    vault.accountDefault = prvKey
 
     if (name || name !== '') {
       const pool = new SimplePool()
@@ -52,6 +51,13 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
       const signedEvent = finalizeEvent(event, prvKey)
       await Promise.any(pool.publish(relays, signedEvent))
     }
+
+    const encryptedVault = encrypt(vault, storage.password)
+    await browser.storage.local.set({ 
+      vault,
+      encryptedVault,
+    })
+    await updateAccounts()
 
     setName('')
     callBack()

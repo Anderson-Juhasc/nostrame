@@ -9,6 +9,7 @@ import SigninPage from './pages/SigninPage'
 import SignupPage from './pages/SignupPage'
 import VaultPage from './pages/VaultPage'
 import NotFoundPage from './pages/NotFoundPage'
+import GeneratorPage from './pages/GeneratorPage'
 
 const App = () => {
   return (
@@ -22,6 +23,7 @@ const App = () => {
             <Route path="signin" element={<SigninPage />} />
             <Route path="signup" element={<SignupPage />} />
             <Route path="vault" element={<PrivateRoute Component={VaultPage} />} />
+            <Route path="generator" element={<PrivateRoute Component={GeneratorPage} />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
