@@ -87,6 +87,7 @@ const Accounts = () => {
     <>
       <div className="account">
         <a href="#" className="account-profile" onClick={(e) => { e.preventDefault(); toggleDropdown() }}>
+          <span>&#x25BC;</span>
           <img className="account-profile__img" src={defaultAccount.picture} style={{ borderRadius: '50%', border: '2px solid #fff' }} />
           <div className="account-profile__body">
             <strong className="account-profile__name">
