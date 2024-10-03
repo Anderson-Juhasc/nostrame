@@ -15,7 +15,29 @@
   },
   "options_page": "options.html",
   "action": {
+    "default_title": "Nostrame",
     "default_popup": "popup.html"
   },
-  "permissions": ["storage"]
+  "content_scripts": [
+    {
+      "run_at": "document_end",
+      "matches": ["<all_urls>"],
+      "js": ["content-script.build.js"],
+      "all_frames": true
+    }
+  ],
+  "permissions": ["storage", "activeTab", "windows"],
+  "optional_permissions": ["notifications"],
+  "web_accessible_resources": [
+    {
+      "resources": ["nostr-provider.js"],
+      "matches": [
+        "https://*/*",
+        "http://localhost:*/*",
+        "http://0.0.0.0:*/*",
+        "http://127.0.0.1:*/*",
+        "http://*.localhost/*"
+      ]
+    }
+  ]
 }

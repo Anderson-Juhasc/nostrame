@@ -38,10 +38,10 @@ function buildEsbuild() {
       bundle: true,
       entryPoints: {
         'popup.build': './src/popup.jsx',
-        //'prompt.build': './src/prompt.jsx',
+        'prompt.build': './src/prompt.jsx',
         'options.build': './src/options.jsx',
-        'background.build': './src/background.js',
-        //'content-script.build': './src/content-script.js'
+        'background.build': './src/background.jsx',
+        'content-script.build': './src/content-script.jsx'
       },
       outdir: './dist',
       sourcemap: prod ? false : 'inline',
