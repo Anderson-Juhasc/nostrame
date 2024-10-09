@@ -66,9 +66,11 @@ const VaultPage = () => {
     const hostData = {}
 
     Object.entries(policies).forEach(([host, accepts]) => {
-      hostData[host] = hostData[host] || []
-
-      Object.entries(accepts).forEach(([accept, types]) => {
+      Object.entries(accepts).some(([accept, types]) => {
+        if (Object.keys(types).length === 0) {
+          return
+        }
+        hostData[host] = hostData[host] || []
         Object.entries(types).forEach(([type, { conditions, created_at }]) => {
           hostData[host].push({
             type,
@@ -83,9 +85,7 @@ const VaultPage = () => {
     setPermissions(hostData)
   }
 
-  async function handleRevoke(e) {
-    let { host, accept, type } = e.target.dataset
-
+  async function handleRevoke(host, accept, type) {
     if (
       window.confirm(
         `revoke all ${accept === 'true' ? 'accept' : 'deny'
@@ -243,7 +243,7 @@ const VaultPage = () => {
                       <div key={host}>
                         <h3>{host}</h3>
                         {permissions.map((permission, index) => (
-                          <div key={index}>
+                          <div key={host + permission.type + permission.accept + JSON.stringify(permission.conditions)}>
                             <div className="permission-item">
                               <div className="permission-item__col">
                                 <strong>
@@ -266,10 +266,7 @@ const VaultPage = () => {
                               <div className="permission-item__col">
                                 <button
                                   title="Revoke permission"
-                                  onClick={handleRevoke}
-                                  data-host={host}
-                                  data-accept={permission.accept}
-                                  data-type={permission.type}
+                                  onClick={() => { handleRevoke(host, permission.accept, permission.type) }}
                                 >
                                   <i className="icon-bin"></i>
                                 </button>
@@ -281,9 +278,9 @@ const VaultPage = () => {
                       </div>
                     ))
                   )}
-                  {!Object.values(policies) && (
-                    <div style={{ marginTop: '5px' }}>
-                      no permissions have been granted yet
+                  {Object.values(policies).length === 0 && (
+                    <div>
+                      No permissions have been granted yet
                     </div>
                   )}
                 </div>
