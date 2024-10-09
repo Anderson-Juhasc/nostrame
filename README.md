@@ -13,7 +13,7 @@ With Nostrame, you can:
 - Lock and unlock the vault with ease
 - Easily import and export backups
 
-<img src="popup-screenshot.png" alt="Nostrame Popup" style="width:357px;height:600px;">
+<img src="popup-screenshot.png" alt="Nostrame Popup">
 
 This extension is Chromium-only.
 
