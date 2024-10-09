@@ -85,7 +85,11 @@ browser.windows.onRemoved.addListener(_ => {
 })
 
 browser.storage.onChanged.addListener((changes, area) => {
-  accountDefault = changes.vault.newValue.accountDefault
+  for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+    if (key === 'vault') {
+      accountDefault = newValue.accountDefault
+    }
+  }
 })
 
 async function handleContentScriptMessage({type, params, host}) {

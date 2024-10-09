@@ -691,10 +691,13 @@ label {
   display: block;
 }
 
+.tabs {
+  padding-bottom: 65px;
+}
 
 .foot {
   background-color: #5d5d5d;
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
@@ -740,4 +743,21 @@ label {
 
 .tabs-content {
   padding: 10px;
+}
+
+.permission-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.permission-item__col:first-child {
+    flex: 0 0 70%;
+}
+
+.permission-item__col:last-child {
+    flex: 0 0 30%;
+    display: flex;
+    justify-content: flex-end;
 }

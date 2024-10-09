@@ -7,7 +7,7 @@ import copyToClipboard from '../helpers/copyToClipboard'
 import EditAccountModal from '../modals/EditAccountModal'
 import AccountDetailsModal from '../modals/AccountDetailsModal'
 import MainContext from '../contexts/MainContext'
-import { encrypt } from '../common'
+import { encrypt, removePermissions } from '../common'
 
 const VaultPage = () => {
   const { accounts, defaultAccount, updateAccounts, updateDefaultAccount } = useContext(MainContext)
@@ -18,15 +18,18 @@ const VaultPage = () => {
   const [accountEditing, setAccountEditing] = useState({})
   const [accountDetails, setAccountDetails] = useState({})
   const [showAccountDetails, setShowAccountDetails] = useState(false)
-  //const [defaultAccount, setDefaultAccount] = useState({})
+  const [policies, setPermissions] = useState([])
   const [accountFormat, setAccountFormat] = useState('bech32')
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     updateAccounts()
+    loadPermissions()
     browser.storage.onChanged.addListener(function(changes, area) {
-      if (changes.isAuthenticated && !changes.isAuthenticated.newValue) {
-        window.location.reload()
+      for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+        if (key === 'isAuthenticated') {
+          window.location.reload()
+        }
       }
     })
   }, [])
@@ -36,11 +39,11 @@ const VaultPage = () => {
       fetchData()
 
       browser.storage.onChanged.addListener(function(changes, area) {
-        let { newValue, oldValue } = changes.vault
-        if (newValue.accountDefault !== oldValue.accountDefault) {
-          //setLoaded(false)
-          //fetchData()
-        }
+        //let { newValue, oldValue } = changes.vault
+        //if (newValue.accountDefault !== oldValue.accountDefault) {
+        //  //setLoaded(false)
+        //  //fetchData()
+        //}
       })
     }
   }, [accounts])
@@ -55,8 +58,44 @@ const VaultPage = () => {
     if (!storage.vault.accountDefault) {
       storage.vault.accountDefault = storage.vault.accounts[0].prvKey
     }
-
     setLoaded(true)
+  }
+
+  async function loadPermissions() {
+    let { policies = {} } = await browser.storage.local.get('policies')
+    const hostData = {}
+
+    Object.entries(policies).forEach(([host, accepts]) => {
+      hostData[host] = hostData[host] || []
+
+      Object.entries(accepts).forEach(([accept, types]) => {
+        Object.entries(types).forEach(([type, { conditions, created_at }]) => {
+          hostData[host].push({
+            type,
+            accept,
+            conditions,
+            created_at
+          })
+        })
+      })
+    })
+
+    setPermissions(hostData)
+  }
+
+  async function handleRevoke(e) {
+    let { host, accept, type } = e.target.dataset
+
+    if (
+      window.confirm(
+        `revoke all ${accept === 'true' ? 'accept' : 'deny'
+        } ${type} policies from ${host}?`
+      )
+    ) {
+      await removePermissions(host, accept, type)
+      //showMessage('removed policies') add toast
+      loadPermissions()
+    }
   }
 
   const editAccountCallback = async () => {
@@ -199,7 +238,54 @@ const VaultPage = () => {
               
               <div className="tabs-content">
                 <div className="tabs-item">
-                  No permissions have been granted yet
+                  {!!Object.values(policies).length && (
+                    Object.entries(policies).map(([host, permissions]) => (
+                      <div key={host}>
+                        <h3>{host}</h3>
+                        {permissions.map((permission, index) => (
+                          <div key={index}>
+                            <div className="permission-item">
+                              <div className="permission-item__col">
+                                <strong>
+                                  {permission.type}
+                                  &nbsp;
+                                  {permission.accept === 'true' ? 'allow' : 'deny'}
+                                  &nbsp;
+                                  {permission.conditions.kinds
+                                    ? `kinds: ${Object.keys(permission.conditions.kinds).join(', ')}`
+                                    : 'always'}
+                                </strong>
+                                <br />
+                                {new Date(permission.created_at * 1000)
+                                  .toISOString()
+                                  .split('.')[0]
+                                  .split('T')
+                                  .join(' ')}
+                              </div>
+
+                              <div className="permission-item__col">
+                                <button
+                                  title="Revoke permission"
+                                  onClick={handleRevoke}
+                                  data-host={host}
+                                  data-accept={permission.accept}
+                                  data-type={permission.type}
+                                >
+                                  <i className="icon-bin"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <hr />
+                      </div>
+                    ))
+                  )}
+                  {!Object.values(policies) && (
+                    <div style={{ marginTop: '5px' }}>
+                      no permissions have been granted yet
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

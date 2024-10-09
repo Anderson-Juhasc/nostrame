@@ -18,21 +18,25 @@ export const MainProvider = ({ children }) => {
     fetchData()
 
     browser.storage.onChanged.addListener(async (changes, area) => {
-      let { newValue, oldValue } = changes.vault
-      if (newValue.accountDefault !== oldValue.accountDefault) {
-        //fetchData()
+      if (changes.vault) {
+        let { newValue, oldValue } = changes.vault
+        if (newValue.accountDefault !== oldValue.accountDefault) {
+          //fetchData()
+        }
       }
     })
   }, [])
 
   useEffect(() => {
     browser.storage.onChanged.addListener(async (changes, area) => {
-      let { newValue, oldValue } = changes.vault
-      if (newValue.accountDefault !== oldValue.accountDefault) {
-        //const storage = await browser.storage.local.get()
-        //const defaultAccount = accounts.find(key => key.prvKey === storage.vault.accountDefault)
-        //setDefaultAccount(defaultAccount)
-        //fetchData()
+      if (changes.vault) {
+        let { newValue, oldValue } = changes.vault
+        if (newValue.accountDefault !== oldValue.accountDefault) {
+          //const storage = await browser.storage.local.get()
+          //const defaultAccount = accounts.find(key => key.prvKey === storage.vault.accountDefault)
+          //setDefaultAccount(defaultAccount)
+          //fetchData()
+        }
       }
     })
   }, [accounts])

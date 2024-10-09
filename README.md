@@ -1,10 +1,19 @@
-# Nostrame(Nostr Accounts Managing Extension)
+# Nostrame(Nostr Account Management Extension)
 
-Nostrame is a comprehensive account management solution designed to streamline your digital accounts handling. With its robust features, you can effortlessly generate accounts using a mnemonic and passphrase, import external accounts in hex and bech32 formats, and conveniently access and modify kind 0 data. What sets Nostrame apart is its advanced encryption capabilities, allowing you to safeguard your mnemonic with ease. Additionally, it have backup encrypted processes by enabling import and export functionalities using a master password.
+Nostrame, a powerful Chromium extension that acts as a secure vault for managing your accounts. 
+
+With Nostrame, you can:
+
+- Derive accounts from a mnemonic seed
+- Generate random mnemonic accounts
+- NIP-07 - window.nostr capability for web browsers
+- Import external accounts
+- Set basic metadata on Nostr
+- Enjoy encryption secured by a master password
+- Lock and unlock the vault with ease
+- Easily import and export backups
 
 <img src="popup-screenshot.png" alt="Nostrame Popup" style="width:357px;height:600px;">
-
-<img src="options-page-screenshot.png" alt="Nostrame Options Page" style="width:1286px;">
 
 This extension is Chromium-only.
 
