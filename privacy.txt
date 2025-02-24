@@ -1,0 +1,9 @@
+Privacy Policy for Nostrame
+
+Nostrame does not collect, store, or share any personal information from its users. All data processed by the extension remains locally on the user’s device and is not transmitted to any external servers, except when shared with default relays or user-defined relays, which are used as part of the standard operation of the Nostr protocol.
+
+The data shared with relays consists exclusively of the information that the user chooses to make public, in accordance with the functionalities provided by the Nostr protocol.
+
+We are committed to ensuring your privacy and only share data with relays necessary for the proper operation of the extension within the Nostr network. If future updates to the extension require additional data processing, this privacy policy will be updated accordingly.
+
+If you have any questions regarding this privacy policy, feel free to contact us.
