@@ -1,7 +1,7 @@
 {
   "name": "Nostrame",
   "description": "Nostr Accounts Managing Extension",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "homepage_url": "https://github.com/Anderson-Juhasc/nostrame",
   "manifest_version": 3,
   "icons": {
@@ -26,7 +26,7 @@
       "all_frames": true
     }
   ],
-  "permissions": ["storage", "activeTab", "windows"],
+  "permissions": ["storage", "windows"],
   "optional_permissions": ["notifications"],
   "web_accessible_resources": [
     {
