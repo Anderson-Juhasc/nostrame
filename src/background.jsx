@@ -204,10 +204,6 @@ async function handleContentScriptMessage({type, params, host}) {
       case 'getPublicKey': {
         return getPublicKey(accountDefault)
       }
-      case 'getRelays': {
-        let results = await browser.storage.local.get('relays')
-        return results.relays || {}
-      }
       case 'signEvent': {
         const event = finalizeEvent(params.event, accountDefault)
 
