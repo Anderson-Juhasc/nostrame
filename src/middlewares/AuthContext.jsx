@@ -1,20 +1,31 @@
 import browser from 'webextension-polyfill'
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  useEffect(() => {
-    fetchData()
+  const fetchData = useCallback(async () => {
+    const storage = await browser.storage.local.get('isAuthenticated')
+    setIsAuthenticated(storage.isAuthenticated === true)
   }, [])
 
-  const fetchData = async () => {
-    const storage = await browser.storage.local.get('isAuthenticated')
+  useEffect(() => {
+    fetchData()
 
-    setIsAuthenticated(storage.isAuthenticated === true)
-  }
+    const handleStorageChange = (changes) => {
+      if (changes.isAuthenticated) {
+        setIsAuthenticated(changes.isAuthenticated.newValue === true)
+      }
+    }
+
+    browser.storage.onChanged.addListener(handleStorageChange)
+
+    return () => {
+      browser.storage.onChanged.removeListener(handleStorageChange)
+    }
+  }, [fetchData])
 
   const login = async () => {
     setIsAuthenticated(true)
@@ -22,7 +33,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setIsAuthenticated(false)
-    localStorage.removeItem('isAuthenticated')
   }
 
   return (
