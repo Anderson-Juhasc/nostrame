@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { finalizeEvent } from 'nostr-tools/pure'
-import { encrypt, getSessionPassword, pool, DEFAULT_RELAYS } from '../common'
+import { encrypt, getSessionPassword, getSessionVault, setSessionVault, pool, DEFAULT_RELAYS } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
 
@@ -25,11 +25,11 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
   const addAccount = async (e) => {
     e.preventDefault()
 
-    const storage = await browser.storage.local.get(['vault', 'relays'])
-    const vault = storage.vault
+    const storage = await browser.storage.local.get(['relays'])
+    const vault = await getSessionVault()
     const password = await getSessionPassword()
 
-    if (!password) {
+    if (!password || !vault) {
       alert('Session expired. Please unlock your vault again.')
       return
     }
@@ -48,7 +48,7 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
         created_at: Math.floor(Date.now() / 1000),
         tags: [],
         content: JSON.stringify({
-          name: name, 
+          name: name,
           display_name: name,
         }),
       }
@@ -58,10 +58,8 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     }
 
     const encryptedVault = encrypt(vault, password)
-    await browser.storage.local.set({ 
-      vault,
-      encryptedVault,
-    })
+    await browser.storage.local.set({ encryptedVault })
+    await setSessionVault(vault)
     await updateAccounts()
 
     setName('')

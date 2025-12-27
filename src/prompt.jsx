@@ -1,14 +1,22 @@
 import browser from 'webextension-polyfill'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
+import * as nip19 from 'nostr-tools/nip19'
 
 import {PERMISSION_NAMES} from './common'
+
+function shortenPubkey(pubkey) {
+  if (!pubkey) return ''
+  const npub = nip19.npubEncode(pubkey)
+  return npub.slice(0, 12) + '...' + npub.slice(-8)
+}
 
 function Prompt() {
   let qs = new URLSearchParams(location.search)
   let id = qs.get('id')
   let host = qs.get('host')
   let type = qs.get('type')
+  let pubkey = qs.get('pubkey')
   let params, event
   try {
     params = JSON.parse(qs.get('params'))
@@ -20,6 +28,29 @@ function Prompt() {
 
   return (
     <>
+      {/* Active account indicator */}
+      {pubkey && (
+        <div style={{
+          background: '#1a1a2e',
+          border: '2px solid #4a9eff',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          marginBottom: '12px',
+          textAlign: 'center'
+        }}>
+          <div style={{fontSize: '11px', color: '#888', marginBottom: '4px'}}>
+            SIGNING AS
+          </div>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            color: '#4a9eff',
+            fontWeight: 'bold'
+          }}>
+            {shortenPubkey(pubkey)}
+          </div>
+        </div>
+      )}
       <div>
         <b style={{display: 'block', textAlign: 'center', fontSize: '200%'}}>
           {host}
@@ -47,7 +78,7 @@ function Prompt() {
           style={{marginTop: '5px'}}
           onClick={authorizeHandler(
             true,
-            {} // store this and answer true forever
+            {remember: 'forever'} // store this and answer true forever
           )}
         >
           authorize forever
@@ -57,13 +88,13 @@ function Prompt() {
             style={{marginTop: '5px'}}
             onClick={authorizeHandler(
               true,
-              {kinds: {[event.kind]: true}} // store and always answer true for all events that match this condition
+              {remember: 'kind', kinds: {[event.kind]: true}} // store for specific kind
             )}
           >
             authorize kind {event.kind} forever
           </button>
         )}
-        <button style={{marginTop: '5px'}} onClick={authorizeHandler(true)}>
+        <button style={{marginTop: '5px'}} onClick={authorizeHandler(true, null)}>
           authorize just this
         </button>
         {event?.kind !== undefined ? (
@@ -71,7 +102,7 @@ function Prompt() {
             style={{marginTop: '5px'}}
             onClick={authorizeHandler(
               false,
-              {kinds: {[event.kind]: true}} // idem
+              {remember: 'kind', kinds: {[event.kind]: true}} // reject specific kind
             )}
           >
             reject kind {event.kind} forever
@@ -81,13 +112,13 @@ function Prompt() {
             style={{marginTop: '5px'}}
             onClick={authorizeHandler(
               false,
-              {} // idem
+              {remember: 'forever'} // reject forever
             )}
           >
             reject forever
           </button>
         )}
-        <button style={{marginTop: '5px'}} onClick={authorizeHandler(false)}>
+        <button style={{marginTop: '5px'}} onClick={authorizeHandler(false, null)}>
           reject
         </button>
       </div>

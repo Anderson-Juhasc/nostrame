@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
 import { hexToBytes, bytesToHex } from 'nostr-tools/utils'
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
-import { encrypt, getSessionPassword } from '../common'
+import { encrypt, getSessionPassword, getSessionVault, setSessionVault } from '../common'
 import Modal from './Modal'
 
 const GenerateRandomAccountModal = ({ isOpen, onClose, callBack }) => {
@@ -34,21 +34,18 @@ const GenerateRandomAccountModal = ({ isOpen, onClose, callBack }) => {
   }
 
   const importAccount = async () => {
-    const storage = await browser.storage.local.get(['vault'])
-    const vault = storage.vault
+    const vault = await getSessionVault()
     const password = await getSessionPassword()
 
-    if (!password) {
+    if (!password || !vault) {
       alert('Session expired. Please unlock your vault again.')
       return
     }
 
     vault.importedAccounts.push({ prvKey: account.prvKey })
     const encryptedVault = encrypt(vault, password)
-    await browser.storage.local.set({
-      vault,
-      encryptedVault,
-    })
+    await browser.storage.local.set({ encryptedVault })
+    await setSessionVault(vault)
 
     callBack()
     closeModal()

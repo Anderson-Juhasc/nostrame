@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import * as nip19 from 'nostr-tools/nip19'
 import * as nip49 from 'nostr-tools/nip49'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
-import { encrypt, getSessionPassword } from '../common'
+import { encrypt, getSessionPassword, getSessionVault, setSessionVault } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
 
@@ -39,11 +39,10 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
   const importAccount = async (e) => {
     e.preventDefault()
 
-    const storage = await browser.storage.local.get(['vault'])
-    const vault = storage.vault
+    const vault = await getSessionVault()
     const password = await getSessionPassword()
 
-    if (!password) {
+    if (!password || !vault) {
       alert('Session expired. Please unlock your vault again.')
       return
     }
@@ -70,10 +69,8 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         vault.importedAccounts.push({ prvKey: prvKeyHex })
         vault.accountDefault = prvKeyHex
         const encryptedVault = encrypt(vault, password)
-        await browser.storage.local.set({
-          vault,
-          encryptedVault,
-        })
+        await browser.storage.local.set({ encryptedVault })
+        await setSessionVault(vault)
         await updateAccounts()
 
         callBack()
@@ -98,10 +95,8 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           vault.importedAccounts.push({ prvKey: prvKeyHex })
           vault.accountDefault = prvKeyHex
           const encryptedVault = encrypt(vault, password)
-          await browser.storage.local.set({ 
-            vault,
-            encryptedVault,
-          })
+          await browser.storage.local.set({ encryptedVault })
+          await setSessionVault(vault)
           await updateAccounts()
 
           callBack()
@@ -128,10 +123,8 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         vault.importedAccounts.push({ prvKey: prvKeyHex })
         vault.accountDefault = prvKeyHex
         const encryptedVault = encrypt(vault, password)
-        await browser.storage.local.set({ 
-          vault,
-          encryptedVault,
-        })
+        await browser.storage.local.set({ encryptedVault })
+        await setSessionVault(vault)
         await updateAccounts()
 
         callBack()

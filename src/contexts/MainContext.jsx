@@ -4,7 +4,7 @@ import * as nip19 from 'nostr-tools/nip19'
 import { hexToBytes } from 'nostr-tools/utils'
 import { getPublicKey } from 'nostr-tools/pure'
 import getIdenticon from '../helpers/identicon'
-import { pool, DEFAULT_RELAYS } from '../common'
+import { pool, DEFAULT_RELAYS, getSessionVault } from '../common'
 
 const MainContext = createContext()
 
@@ -31,10 +31,11 @@ export const MainProvider = ({ children }) => {
   const fetchData = useCallback(async () => {
     try {
       const storage = await browser.storage.local.get()
+      const vault = await getSessionVault()
 
       if (!mountedRef.current) return
 
-      if (!storage.isAuthenticated || storage.isLocked) {
+      if (!storage.isAuthenticated || storage.isLocked || !vault) {
         setLoading(false)
         return
       }
@@ -43,7 +44,7 @@ export const MainProvider = ({ children }) => {
       let authors = []
 
       // Process derived accounts
-      const derivedAccounts = storage.vault?.accounts || []
+      const derivedAccounts = vault.accounts || []
       for (let i = 0; i < derivedAccounts.length; i++) {
         const prvKey = derivedAccounts[i].prvKey
         const pubKey = getPublicKey(prvKey)
@@ -62,7 +63,7 @@ export const MainProvider = ({ children }) => {
       }
 
       // Process imported accounts
-      const importedAccounts = storage.vault?.importedAccounts || []
+      const importedAccounts = vault.importedAccounts || []
       for (let i = 0; i < importedAccounts.length; i++) {
         const prvKey = importedAccounts[i].prvKey
         const pubKey = getPublicKey(prvKey)
@@ -110,7 +111,7 @@ export const MainProvider = ({ children }) => {
       if (!mountedRef.current) return
 
       // Set default account
-      const defaultPrvKey = storage.vault?.accountDefault || derivedAccounts[0]?.prvKey
+      const defaultPrvKey = vault.accountDefault || derivedAccounts[0]?.prvKey
       const defaultAcc = loadAccounts.find(acc => acc.prvKey === defaultPrvKey)
 
       setAccounts(loadAccounts)
@@ -130,7 +131,7 @@ export const MainProvider = ({ children }) => {
     fetchData()
 
     const handleStorageChange = (changes) => {
-      if (changes.vault || changes.isAuthenticated || changes.isLocked) {
+      if (changes.isAuthenticated || changes.isLocked) {
         fetchData()
       }
     }
@@ -148,8 +149,8 @@ export const MainProvider = ({ children }) => {
   }, [fetchData])
 
   const updateDefaultAccount = useCallback(async () => {
-    const storage = await browser.storage.local.get(['vault'])
-    const defaultAcc = accounts.find(acc => acc.prvKey === storage.vault?.accountDefault)
+    const vault = await getSessionVault()
+    const defaultAcc = accounts.find(acc => acc.prvKey === vault?.accountDefault)
     if (defaultAcc) {
       setDefaultAccount(defaultAcc)
     }

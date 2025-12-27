@@ -6,7 +6,7 @@ import EditAccountModal from '../modals/EditAccountModal'
 import AccountDetailsModal from '../modals/AccountDetailsModal'
 import Loading from '../components/Loading'
 import MainContext from '../contexts/MainContext'
-import { encrypt, removePermissions, getSessionPassword } from '../common'
+import { encrypt, removePermissions, getSessionPassword, getSessionVault, setSessionVault } from '../common'
 
 const VaultPage = () => {
   const { accounts, defaultAccount, loading, updateAccounts } = useContext(MainContext)
@@ -96,10 +96,10 @@ const VaultPage = () => {
       return
     }
 
-    const { vault } = await browser.storage.local.get(['vault'])
+    const vault = await getSessionVault()
     const password = await getSessionPassword()
 
-    if (!password) {
+    if (!password || !vault) {
       alert('Session expired. Please unlock your vault again.')
       return
     }
@@ -111,7 +111,8 @@ const VaultPage = () => {
       vault.accountDefault = undefined
 
       const encryptedVault = encrypt(vault, password)
-      await browser.storage.local.set({ encryptedVault, vault })
+      await browser.storage.local.set({ encryptedVault })
+      await setSessionVault(vault)
       await updateAccounts()
     }
   }
@@ -209,7 +210,11 @@ const VaultPage = () => {
                           <strong>
                             {permission.type} {permission.accept === 'true' ? 'allow' : 'deny'}
                             {' '}
-                            {permission.conditions?.kinds
+                            {permission.conditions?.remember === 'kind' && permission.conditions?.kinds
+                              ? `kinds: ${Object.keys(permission.conditions.kinds).join(', ')}`
+                              : permission.conditions?.remember === 'forever'
+                              ? 'always'
+                              : permission.conditions?.kinds
                               ? `kinds: ${Object.keys(permission.conditions.kinds).join(', ')}`
                               : 'always'}
                           </strong>

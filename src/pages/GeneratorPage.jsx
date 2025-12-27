@@ -5,7 +5,7 @@ import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { getPublicKey } from 'nostr-tools/pure'
-import { encrypt, getSessionPassword } from '../common'
+import { encrypt, getSessionPassword, getSessionVault, setSessionVault } from '../common'
 import Loading from '../components/Loading'
 import MainContext from '../contexts/MainContext'
 
@@ -46,11 +46,10 @@ const GeneratorPage = () => {
   }
 
   const importAccount = async () => {
-    const storage = await browser.storage.local.get(['vault'])
-    const vault = storage.vault
+    const vault = await getSessionVault()
     const password = await getSessionPassword()
 
-    if (!password) {
+    if (!password || !vault) {
       alert('Session expired. Please unlock your vault again.')
       return
     }
@@ -58,10 +57,8 @@ const GeneratorPage = () => {
     vault.importedAccounts.push({ prvKey: account.prvKey })
     vault.accountDefault = account.prvKey
     const encryptedVault = encrypt(vault, password)
-    await browser.storage.local.set({
-      vault,
-      encryptedVault,
-    })
+    await browser.storage.local.set({ encryptedVault })
+    await setSessionVault(vault)
     await updateAccounts()
 
     navigate('/vault')

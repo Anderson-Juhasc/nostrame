@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { encrypt, setSessionPassword } from '../common'
+import { encrypt, setSessionPassword, setSessionVault } from '../common'
 import { useAuth } from '../middlewares/AuthContext';
 
 const Signin = () => {
@@ -66,9 +66,9 @@ const Signin = () => {
     const encryptedVault = encrypt(vaultData, password)
 
     await setSessionPassword(password)
+    await setSessionVault(vaultData)
 
     await browser.storage.local.set({
-      vault: vaultData,
       encryptedVault,
       isAuthenticated: true,
     })

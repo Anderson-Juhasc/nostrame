@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
-import { decrypt, setSessionPassword } from '../common'
+import { decrypt, setSessionPassword, setSessionVault, getSessionPassword, getSessionVault } from '../common'
 
 const ImportVault = ({ fetchData }) => {
   const [file, setFile] = useState(null)
@@ -20,11 +20,24 @@ const ImportVault = ({ fetchData }) => {
         const encryptedVault = (JSON.parse(reader.result)).vault
         try {
           const vaultData = decrypt(encryptedVault, password)
+
+          // Set session data
           await setSessionPassword(password)
+          await setSessionVault(vaultData)
+
+          // Verify session data was actually stored
+          const storedPassword = await getSessionPassword()
+          const storedVault = await getSessionVault()
+
+          if (!storedPassword || !storedVault) {
+            alert('Failed to store session data. Please try again or check browser permissions.')
+            return
+          }
+
           await browser.storage.local.set({
-            vault: vaultData,
             encryptedVault,
             isAuthenticated: true,
+            isLocked: false,
           })
           setPassword('')
           fetchData()

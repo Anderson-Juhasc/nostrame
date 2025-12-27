@@ -24,14 +24,21 @@ export const DEFAULT_RELAYS = [
 
 // Get the session storage API (chrome.storage.session or browser.storage.session)
 function getSessionStorage() {
-  // Try browser.storage.session first (Firefox/polyfill)
-  if (typeof browser !== 'undefined' && browser.storage?.session) {
+  // Try multiple ways to access Chrome's session storage
+  const chromeSession = globalThis.chrome?.storage?.session ||
+                        (typeof chrome !== 'undefined' && chrome?.storage?.session) ||
+                        (typeof window !== 'undefined' && window.chrome?.storage?.session)
+
+  if (chromeSession) {
+    return chromeSession
+  }
+
+  // Try browser.storage.session (Firefox/polyfill)
+  if (browser?.storage?.session) {
     return browser.storage.session
   }
-  // Fall back to chrome.storage.session (Chrome native)
-  if (typeof chrome !== 'undefined' && chrome.storage?.session) {
-    return chrome.storage.session
-  }
+
+  console.warn('Session storage not available - vault data will not persist between popup opens')
   return null
 }
 
@@ -61,6 +68,29 @@ export async function clearSessionPassword() {
 export async function hasSessionPassword() {
   const password = await getSessionPassword()
   return password !== null
+}
+
+export async function setSessionVault(vault) {
+  const sessionStorage = getSessionStorage()
+  if (sessionStorage) {
+    await sessionStorage.set({ vault })
+  }
+}
+
+export async function getSessionVault() {
+  const sessionStorage = getSessionStorage()
+  if (sessionStorage) {
+    const result = await sessionStorage.get('vault')
+    return result.vault || null
+  }
+  return null
+}
+
+export async function clearSessionVault() {
+  const sessionStorage = getSessionStorage()
+  if (sessionStorage) {
+    await sessionStorage.remove('vault')
+  }
 }
 
 function deriveKey(password, salt) {
@@ -107,12 +137,22 @@ export const PERMISSION_NAMES = Object.fromEntries([
 ])
 
 function matchConditions(conditions, event) {
-  if (conditions?.kinds) {
-    if (event.kind in conditions.kinds) return true
-    else return false
+  // Must have 'remember' field to be a valid stored permission
+  // This prevents old empty objects {} from auto-authorizing
+  if (!conditions?.remember) {
+    return false
   }
 
-  return true
+  // Check for kind-specific permissions
+  if (conditions.kinds) {
+    if (event?.kind !== undefined && event.kind in conditions.kinds) {
+      return true
+    }
+    return false
+  }
+
+  // 'forever' means match all
+  return conditions.remember === 'forever'
 }
 
 export async function getPermissionStatus(host, type, event) {
@@ -121,19 +161,26 @@ export async function getPermissionStatus(host, type, event) {
   let answers = [true, false]
   for (let i = 0; i < answers.length; i++) {
     let accept = answers[i]
-    let {conditions} = policies?.[host]?.[accept]?.[type] || {}
+    let policy = policies?.[host]?.[accept]?.[type]
 
-    if (conditions) {
+    if (policy?.conditions) {
+      const conditions = policy.conditions
+
+      // Must have 'remember' field to be a valid stored permission
+      if (!conditions.remember) {
+        continue
+      }
+
       if (type === 'signEvent') {
         if (matchConditions(conditions, event)) {
-          return accept // may be true or false
-        } else {
-          // if this doesn't match we just continue so it will either match for the opposite answer (reject)
-          // or it will end up returning undefined at the end
-          continue
+          return accept
         }
+        continue
       } else {
-        return accept // may be true or false
+        // For non-signEvent types, 'forever' or 'kind' both mean auto-authorize
+        if (conditions.remember === 'forever' || conditions.remember === 'kind') {
+          return accept
+        }
       }
     }
   }
@@ -142,38 +189,36 @@ export async function getPermissionStatus(host, type, event) {
 }
 
 export async function updatePermission(host, type, accept, conditions) {
+  // Only store if conditions has a 'remember' field
+  if (!conditions?.remember) {
+    return
+  }
+
   let {policies = {}} = await browser.storage.local.get('policies')
 
-  // if the new conditions is "match everything", override the previous
-  if (Object.keys(conditions).length === 0) {
-    conditions = {}
-  } else {
-    // if we already had a policy for this, merge the conditions
+  // Merge kind-specific permissions if both have kinds
+  if (conditions.remember === 'kind' && conditions.kinds) {
     let existingConditions = policies[host]?.[accept]?.[type]?.conditions
-    if (existingConditions) {
-      if (existingConditions.kinds && conditions.kinds) {
-        Object.keys(existingConditions.kinds).forEach(kind => {
-          conditions.kinds[kind] = true
-        })
-      }
+    if (existingConditions?.kinds) {
+      Object.keys(existingConditions.kinds).forEach(kind => {
+        conditions.kinds[kind] = true
+      })
     }
   }
 
-  // if we have a reverse policy (accept / reject) that is exactly equal to this, remove it
-  let other = !accept
-  let reverse = policies?.[host]?.[other]?.[type]
-  if (
-    reverse &&
-    JSON.stringify(reverse.conditions) === JSON.stringify(conditions)
-  ) {
-    delete policies[host][other][type]
+  // If 'forever' permission, remove any kind-specific permission for opposite action
+  if (conditions.remember === 'forever') {
+    let other = !accept
+    if (policies?.[host]?.[other]?.[type]) {
+      delete policies[host][other][type]
+    }
   }
 
   // insert our new policy
   policies[host] = policies[host] || {}
   policies[host][accept] = policies[host][accept] || {}
   policies[host][accept][type] = {
-    conditions, // filter that must match the event (in case of signEvent)
+    conditions,
     created_at: Math.round(Date.now() / 1000)
   }
 

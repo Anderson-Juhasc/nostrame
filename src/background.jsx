@@ -11,26 +11,26 @@ import {
   getPermissionStatus,
   updatePermission,
   showNotification,
-  getPosition
+  getPosition,
+  getSessionVault
 } from './common'
 
 let openPrompt = null
 let promptMutex = new Mutex()
 let releasePromptMutex = () => {}
 let secretsCache = new LRUCache(100)
-let accountDefault = null
-let previousSk = null
+let lastUsedAccount = null
 
-function clearSecrets() {
+function clearAllCaches() {
   secretsCache.clear()
-  accountDefault = null
-  previousSk = null
+  lastUsedAccount = null
 }
 
 function getSharedSecret(sk, peer) {
-  if (previousSk !== sk) {
+  // Clear cache if account changed
+  if (lastUsedAccount !== sk) {
     secretsCache.clear()
-    previousSk = sk
+    lastUsedAccount = sk
   }
 
   let key = secretsCache.get(peer)
@@ -43,20 +43,33 @@ function getSharedSecret(sk, peer) {
   return key
 }
 
+// Always get fresh account from session storage - NEVER cache
+async function getCurrentAccount() {
+  const vault = await getSessionVault()
+  if (!vault || !vault.accountDefault) {
+    return null
+  }
+  return vault.accountDefault
+}
+
 const width = 340
 const height = 360
 
 browser.runtime.onInstalled.addListener(async (_, __, reason) => {
   if (reason === 'install') browser.runtime.openOptionsPage()
 
-  await browser.storage.local.set({ 
+  // Set default relays
+  await browser.storage.local.set({
     "relays": [
       "wss://relay.damus.io",
       "wss://nos.lol",
       "wss://nostr.bitcoiner.social",
       "wss://offchain.pub",
-    ] 
+    ]
   })
+
+  // Cleanup: remove unencrypted vault from local storage (security fix)
+  await browser.storage.local.remove(['vault'])
 })
 
 browser.runtime.onMessage.addListener(async (message, sender) => {
@@ -89,15 +102,23 @@ browser.windows.onRemoved.addListener(_ => {
 })
 
 browser.storage.onChanged.addListener((changes, area) => {
-  for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-    if (key === 'vault' && newValue?.accountDefault) {
-      accountDefault = newValue.accountDefault
-    }
-    if (key === 'isLocked' && newValue === true) {
-      clearSecrets()
-    }
+  // Clear all caches when vault changes (account switch) or vault locks
+  if (area === 'session' && changes.vault) {
+    clearAllCaches()
+  }
+  if (changes.isLocked?.newValue === true) {
+    clearAllCaches()
   }
 })
+
+// Chrome-specific listener for session storage (polyfill may not handle it)
+if (globalThis.chrome?.storage?.onChanged) {
+  globalThis.chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'session' && changes.vault) {
+      clearAllCaches()
+    }
+  })
+}
 
 async function handleContentScriptMessage({type, params, host}) {
   if (NO_PERMISSIONS_REQUIRED[type]) {
@@ -164,11 +185,17 @@ async function handleContentScriptMessage({type, params, host}) {
       // ask for authorization
       try {
         let id = Math.random().toString().slice(4)
+
+        // Get current account to show in prompt
+        const currentAccount = await getCurrentAccount()
+        const currentPubkey = currentAccount ? getPublicKey(currentAccount) : null
+
         let qs = new URLSearchParams({
           host,
           id,
           params: JSON.stringify(params),
-          type
+          type,
+          pubkey: currentPubkey || ''
         })
         // center prompt
         const {top, left} = await getPosition(width, height)
@@ -199,25 +226,26 @@ async function handleContentScriptMessage({type, params, host}) {
   }
 
   // if we're here this means it was accepted
-  let { vault, isLocked } = await browser.storage.local.get(['vault', 'isLocked'])
+  let { isLocked } = await browser.storage.local.get(['isLocked'])
 
   if (isLocked) {
     return {error: {message: 'vault is locked, please unlock it first'} }
   }
 
-  if (!vault || !vault.accountDefault) {
+  // ALWAYS get fresh account - never use cached value
+  const activeAccount = await getCurrentAccount()
+
+  if (!activeAccount) {
     return {error: {message: 'no private key found'} }
   }
-
-  accountDefault = vault.accountDefault
 
   try {
     switch (type) {
       case 'getPublicKey': {
-        return getPublicKey(accountDefault)
+        return getPublicKey(activeAccount)
       }
       case 'signEvent': {
-        const event = finalizeEvent(params.event, accountDefault)
+        const event = finalizeEvent(params.event, activeAccount)
 
         return validateEvent(event)
           ? event
@@ -225,21 +253,21 @@ async function handleContentScriptMessage({type, params, host}) {
       }
       case 'nip04.encrypt': {
         let {peer, plaintext} = params
-        return nip04.encrypt(accountDefault, peer, plaintext)
+        return nip04.encrypt(activeAccount, peer, plaintext)
       }
       case 'nip04.decrypt': {
         let {peer, ciphertext} = params
-        return nip04.decrypt(accountDefault, peer, ciphertext)
+        return nip04.decrypt(activeAccount, peer, ciphertext)
       }
       case 'nip44.encrypt': {
         const {peer, plaintext} = params
-        const key = getSharedSecret(accountDefault, peer)
+        const key = getSharedSecret(activeAccount, peer)
 
         return nip44.v2.encrypt(plaintext, key)
       }
       case 'nip44.decrypt': {
         const {peer, ciphertext} = params
-        const key = getSharedSecret(accountDefault, peer)
+        const key = getSharedSecret(activeAccount, peer)
 
         return nip44.v2.decrypt(ciphertext, key)
       }
@@ -253,8 +281,9 @@ async function handlePromptMessage({host, type, accept, conditions}, sender) {
   // return response
   openPrompt?.resolve?.(accept)
 
-  // update policies
-  if (conditions) {
+  // Only store permission if conditions is explicitly set (not null/undefined)
+  // "authorize just this" passes null, "authorize forever" passes {remember: 'forever'}
+  if (conditions !== null && conditions !== undefined && typeof conditions === 'object') {
     await updatePermission(host, type, accept, conditions)
   }
 

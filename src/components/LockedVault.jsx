@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
-import { decrypt, setSessionPassword } from '../common'
+import { decrypt, setSessionPassword, setSessionVault } from '../common'
 
 const LockedVault = ({ fetchData }) => {
   const [password, setPassword] = useState('')
@@ -15,10 +15,8 @@ const LockedVault = ({ fetchData }) => {
       const vaultData = decrypt(storage.encryptedVault, password)
 
       await setSessionPassword(password)
-      await browser.storage.local.set({
-        isLocked: false,
-        vault: vaultData,
-      })
+      await setSessionVault(vaultData)
+      await browser.storage.local.set({ isLocked: false })
 
       setPassword('')
       if (fetchData) fetchData()

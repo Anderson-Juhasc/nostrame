@@ -1,11 +1,12 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import hideStringMiddle from '../helpers/hideStringMiddle'
 import ImportAccountModal from '../modals/ImportAccountModal'
 import DeriveAccountModal from '../modals/DeriveAccountModal'
 import MainContext from '../contexts/MainContext'
-import { clearSessionPassword } from '../common'
+import { clearSessionPassword, clearSessionVault, getSessionVault, setSessionVault, encrypt, getSessionPassword } from '../common'
 
 const Accounts = () => {
   const { accounts, defaultAccount, updateDefaultAccount } = useContext(MainContext)
@@ -17,12 +18,33 @@ const Accounts = () => {
   const navigate = useNavigate()
 
   const changeDefaultAccount = async (prvKey) => {
-    const { vault } = await browser.storage.local.get(['vault'])
+    const vault = await getSessionVault()
+    if (!vault) return
+
+    // Find the account being switched to
+    const targetAccount = accounts.find(acc => acc.prvKey === prvKey)
+    const accountName = targetAccount?.name ||
+      (targetAccount?.type === 'derived' ? `Account ${targetAccount.index}` : `Imported ${targetAccount?.index}`)
+
     vault.accountDefault = prvKey
 
-    await browser.storage.local.set({ vault })
-    updateDefaultAccount()
+    const password = await getSessionPassword()
+    if (password) {
+      const encryptedVault = encrypt(vault, password)
+      await browser.storage.local.set({ encryptedVault })
+    }
+
+    await setSessionVault(vault)
+    await updateDefaultAccount()
     setIsDropdownOpen(false)
+
+    // Show confirmation toast
+    toast.success(`Switched to ${accountName}`, {
+      position: 'bottom-center',
+      autoClose: 2000,
+      hideProgressBar: true
+    })
+
     navigate('/vault')
   }
 
@@ -32,10 +54,8 @@ const Accounts = () => {
 
   const lockVault = async () => {
     await clearSessionPassword()
-    await browser.storage.local.set({
-      isLocked: true,
-      vault: { accounts: [] },
-    })
+    await clearSessionVault()
+    await browser.storage.local.set({ isLocked: true })
   }
 
   return (
@@ -43,13 +63,16 @@ const Accounts = () => {
       <div className="account">
         <a href="#" className="account-profile" onClick={(e) => { e.preventDefault(); toggleDropdown() }}>
           <span>&#x25BC;</span>
-          <img className="account-profile__img" src={defaultAccount.picture} style={{ borderRadius: '50%', border: '2px solid #fff' }} alt="" />
+          <img className="account-profile__img" src={defaultAccount.picture} style={{ borderRadius: '50%', border: '2px solid #4a9eff' }} alt="" />
           <div className="account-profile__body">
             <strong className="account-profile__name">
               {defaultAccount.type === "derived"
                 ? (defaultAccount.name || `Account ${defaultAccount.index}`)
                 : (defaultAccount.name || `Imported ${defaultAccount.index}`)}
             </strong>
+            <div style={{ fontSize: '10px', color: '#888', fontFamily: 'monospace' }}>
+              {defaultAccount.npub ? hideStringMiddle(defaultAccount.npub, 8, 6) : ''}
+            </div>
           </div>
         </a>
 
