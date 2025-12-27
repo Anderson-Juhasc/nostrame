@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import { createRoot } from 'react-dom/client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { ToastContainer } from 'react-toastify'
 
 import ErrorBoundary from './components/ErrorBoundary'
@@ -15,20 +15,25 @@ function Options() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
 
+  const fetchData = useCallback(async () => {
+    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked'])
+    setIsLocked(storage.isLocked || false)
+    setIsAuthenticated(storage.isAuthenticated || false)
+  }, [])
+
   useEffect(() => {
     fetchData()
 
-    browser.storage.onChanged.addListener(function() {
+    const handleStorageChange = () => {
       fetchData()
-    });
-  }, [])
+    }
 
-  const fetchData = async () => {
-    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked'])
+    browser.storage.onChanged.addListener(handleStorageChange)
 
-    setIsLocked(storage.isLocked)
-    setIsAuthenticated(storage.isAuthenticated)
-  }
+    return () => {
+      browser.storage.onChanged.removeListener(handleStorageChange)
+    }
+  }, [fetchData])
 
   return (
     <div className="Options">

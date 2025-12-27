@@ -23,13 +23,19 @@ const Signin = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    browser.storage.onChanged.addListener(async function(changes, area) {
-      if (changes.isAuthenticated) {
+    const handleStorageChange = async (changes) => {
+      if (changes.isAuthenticated?.newValue) {
         await login()
         navigate('/vault')
       }
-    })
-  }, [])
+    }
+
+    browser.storage.onChanged.addListener(handleStorageChange)
+
+    return () => {
+      browser.storage.onChanged.removeListener(handleStorageChange)
+    }
+  }, [login, navigate])
 
   const handleVaultChange = (e) => {
     const { name, value } = e.target;

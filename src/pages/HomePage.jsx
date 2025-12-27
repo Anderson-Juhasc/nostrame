@@ -5,24 +5,28 @@ import { useAuth } from '../middlewares/AuthContext';
 import MainContext from '../contexts/MainContext'
 
 const HomePage = () => {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, login } = useAuth()
 
   if (isAuthenticated) return <Navigate to="/vault" />
 
   const { updateAccounts } = useContext(MainContext)
-
-  const { login } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    browser.storage.onChanged.addListener(async function(changes, area) {
-      if (changes.isAuthenticated) {
+    const handleStorageChange = async (changes) => {
+      if (changes.isAuthenticated?.newValue) {
         await login()
         await updateAccounts()
         navigate('/vault')
       }
-    })
-  }, [])
+    }
+
+    browser.storage.onChanged.addListener(handleStorageChange)
+
+    return () => {
+      browser.storage.onChanged.removeListener(handleStorageChange)
+    }
+  }, [login, updateAccounts, navigate])
 
   return (
     <>

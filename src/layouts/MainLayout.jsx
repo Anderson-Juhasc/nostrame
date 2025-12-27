@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import HeaderVault from '../components/HeaderVault'
@@ -12,15 +12,7 @@ const MainLayout = () => {
   const [isLocked, setIsLocked] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  useEffect(() => {
-    fetchData()
-
-    browser.storage.onChanged.addListener(function(changes, area) {
-      fetchData()
-    })
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const storage = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
 
     // If authenticated but no session password, treat as locked
@@ -31,16 +23,23 @@ const MainLayout = () => {
       return
     }
 
-    if (storage.isLocked) {
-      setIsLocked(true)
-    } else {
-      setIsLocked(false)
+    setIsLocked(storage.isLocked || false)
+    setIsAuthenticated(storage.isAuthenticated || false)
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+
+    const handleStorageChange = () => {
+      fetchData()
     }
 
-    if (storage.isAuthenticated) {
-      setIsAuthenticated(true)
+    browser.storage.onChanged.addListener(handleStorageChange)
+
+    return () => {
+      browser.storage.onChanged.removeListener(handleStorageChange)
     }
-  }
+  }, [fetchData])
 
   return (
     <>
