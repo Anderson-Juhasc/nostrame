@@ -25,7 +25,7 @@ const ChangePassword = ({ fetchData }) => {
     if (!confirmChange) return
 
     if (changePassword.newPassword !== changePassword.confirmNewPassword) {
-      alert('New password do not match!')
+      toast.error('New passwords do not match')
 
       setChangePassword({
         currentPassword: '',

@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext, useCallback } from 'react'
+import { toast } from 'react-toastify'
 import hideStringMiddle from '../helpers/hideStringMiddle'
 import copyToClipboard from '../helpers/copyToClipboard'
 import EditAccountModal from '../modals/EditAccountModal'
@@ -100,7 +101,7 @@ const VaultPage = () => {
     const password = await getSessionPassword()
 
     if (!password || !vault) {
-      alert('Session expired. Please unlock your vault again.')
+      toast.error('Session expired. Please unlock your vault again.')
       return
     }
 

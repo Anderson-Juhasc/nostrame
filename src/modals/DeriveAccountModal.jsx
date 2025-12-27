@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
+import { toast } from 'react-toastify'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { finalizeEvent } from 'nostr-tools/pure'
@@ -30,7 +31,7 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     const password = await getSessionPassword()
 
     if (!password || !vault) {
-      alert('Session expired. Please unlock your vault again.')
+      toast.error('Session expired. Please unlock your vault again.')
       return
     }
 

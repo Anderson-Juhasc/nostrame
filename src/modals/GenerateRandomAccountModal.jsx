@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
+import { toast } from 'react-toastify'
 import * as nip19 from 'nostr-tools/nip19'
 import { hexToBytes, bytesToHex } from 'nostr-tools/utils'
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
@@ -38,7 +39,7 @@ const GenerateRandomAccountModal = ({ isOpen, onClose, callBack }) => {
     const password = await getSessionPassword()
 
     if (!password || !vault) {
-      alert('Session expired. Please unlock your vault again.')
+      toast.error('Session expired. Please unlock your vault again.')
       return
     }
 

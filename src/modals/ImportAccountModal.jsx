@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'
 import * as nip19 from 'nostr-tools/nip19'
 import * as nip49 from 'nostr-tools/nip49'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
@@ -43,14 +44,14 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
     const password = await getSessionPassword()
 
     if (!password || !vault) {
-      alert('Session expired. Please unlock your vault again.')
+      toast.error('Session expired. Please unlock your vault again.')
       return
     }
 
     if (/^ncryptsec/.test(prvKey)) {
       try {
         if (!ncryptsecPassword) {
-          alert('Please enter the decryption password')
+          toast.error('Please enter the decryption password')
           return false
         }
         const prvKeyBytes = await nip49.decrypt(prvKey, ncryptsecPassword)
@@ -59,7 +60,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
         const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
         if (prvKeyExist || prvKeyExistInDerived) {
-          alert('Please provide a not existing private key')
+          toast.error('This private key already exists')
           setPrvKey('')
           setNcryptsecPassword('')
           setIsNcryptsec(false)
@@ -76,7 +77,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         callBack()
         navigate('/vault')
       } catch (err) {
-        alert('Invalid ncryptsec or wrong password')
+        toast.error('Invalid ncryptsec or wrong password')
         setNcryptsecPassword('')
       }
     } else if (/^nsec/.test(prvKey)) {
@@ -88,7 +89,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
           const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
           if (prvKeyExist || prvKeyExistInDerived) {
-            alert('Please provide a not existing private key')
+            toast.error('This private key already exists')
             setPrvKey('')
             return false
           }
@@ -104,7 +105,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           navigate('/vault')
         }
       } catch (e) {
-        alert('Please provide a valid private key')
+        toast.error('Invalid private key format')
         setPrvKey('')
       }
     } else if (/^[0-9a-fA-F]+$/.test(prvKey)) {
@@ -115,7 +116,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
         const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
         if (prvKeyExist || prvKeyExistInDerived) {
-          alert('Please provide a not existing private key')
+          toast.error('This private key already exists')
           setPrvKey('')
           return false
         }
@@ -131,7 +132,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         navigate('/vault')
       } catch (e) {
-        alert('Please provide a valid private key')
+        toast.error('Invalid private key format')
         setPrvKey('')
       }
     }

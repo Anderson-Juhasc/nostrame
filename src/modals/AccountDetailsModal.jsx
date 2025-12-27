@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { toast } from 'react-toastify'
 import {QRCodeSVG} from 'qrcode.react'
 import * as nip49 from 'nostr-tools/nip49'
 import { hexToBytes } from 'nostr-tools/utils'
@@ -33,7 +34,7 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
   const generateNcryptsec = async (e) => {
     e.preventDefault()
     if (!ncryptsecPassword) {
-      alert('Please enter a password')
+      toast.error('Please enter a password')
       return
     }
     try {
@@ -41,7 +42,7 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
       const encrypted = await nip49.encrypt(prvKeyBytes, ncryptsecPassword)
       setNcryptsec(encrypted)
     } catch (err) {
-      alert('Error generating ncryptsec')
+      toast.error('Error generating ncryptsec')
     }
   }
 

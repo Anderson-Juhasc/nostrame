@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { toast } from 'react-toastify'
 import { useStorage } from '../hooks/useStorage'
 import Loading from './Loading'
 
@@ -13,7 +14,7 @@ const Relays = () => {
 
     const relayExist = relays.find(item => item === relay)
     if (relayExist) {
-      alert('Relay already exists')
+      toast.error('Relay already exists')
       setRelay('')
       return
     }

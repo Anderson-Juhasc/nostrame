@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
@@ -50,7 +51,7 @@ const GeneratorPage = () => {
     const password = await getSessionPassword()
 
     if (!password || !vault) {
-      alert('Session expired. Please unlock your vault again.')
+      toast.error('Session expired. Please unlock your vault again.')
       return
     }
 
