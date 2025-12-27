@@ -70,9 +70,6 @@ const Accounts = () => {
                 ? (defaultAccount.name || `Account ${defaultAccount.index}`)
                 : (defaultAccount.name || `Imported ${defaultAccount.index}`)}
             </strong>
-            <div style={{ fontSize: '10px', color: '#888', fontFamily: 'monospace' }}>
-              {defaultAccount.npub ? hideStringMiddle(defaultAccount.npub, 8, 6) : ''}
-            </div>
           </div>
         </a>
 
