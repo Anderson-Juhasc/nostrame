@@ -86,7 +86,7 @@ browser.windows.onRemoved.addListener(_ => {
 
 browser.storage.onChanged.addListener((changes, area) => {
   for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-    if (key === 'vault') {
+    if (key === 'vault' && newValue?.accountDefault) {
       accountDefault = newValue.accountDefault
     }
   }
@@ -192,7 +192,12 @@ async function handleContentScriptMessage({type, params, host}) {
   }
 
   // if we're here this means it was accepted
-  let { vault } = await browser.storage.local.get(['vault'])
+  let { vault, isLocked } = await browser.storage.local.get(['vault', 'isLocked'])
+
+  if (isLocked) {
+    return {error: {message: 'vault is locked, please unlock it first'} }
+  }
+
   if (!vault || !vault.accountDefault) {
     return {error: {message: 'no private key found'} }
   }

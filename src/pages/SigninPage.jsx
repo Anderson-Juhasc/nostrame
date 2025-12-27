@@ -55,6 +55,8 @@ const Signin = () => {
       prvKey,
     })
 
+    vaultData.accountDefault = prvKey
+
     const encryptedVault = encrypt(vaultData, password)
 
     // Store password in session storage (persists across popup opens)
