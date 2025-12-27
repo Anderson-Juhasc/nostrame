@@ -1,15 +1,10 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
-import { SimplePool } from 'nostr-tools/pool'
 import { finalizeEvent } from 'nostr-tools/pure'
 import Modal from './Modal'
+import { pool, DEFAULT_RELAYS } from '../common'
 
 const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
-  const pool = new SimplePool({
-    eoseSubTimeout: 3000,
-    getTimeout: 3000
-  })
-
   const [showModal, setShowModal] = useState(isOpen);
   const [account, setAccount] = useState({
     name: '',
@@ -53,7 +48,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
     e.preventDefault()
     const storage = await browser.storage.local.get(['relays'])
 
-    let relays = storage.relays
+    let relays = storage.relays?.length > 0 ? storage.relays : DEFAULT_RELAYS
 
     try {
       let event = {

@@ -1,5 +1,20 @@
 import browser from 'webextension-polyfill'
 import CryptoJS from 'crypto-js'
+import { SimplePool } from 'nostr-tools/pool'
+
+// Shared pool instance - reuse across all components
+export const pool = new SimplePool({
+  eoseSubTimeout: 3000,
+  getTimeout: 3000
+})
+
+// Default relays
+export const DEFAULT_RELAYS = [
+  "wss://relay.damus.io",
+  "wss://nos.lol",
+  "wss://nostr.bitcoiner.social",
+  "wss://offchain.pub",
+]
 
 function deriveKey(password, salt) {
   const iterations = 10000

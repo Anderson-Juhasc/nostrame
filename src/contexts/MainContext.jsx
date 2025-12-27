@@ -4,18 +4,13 @@ import * as nip19 from 'nostr-tools/nip19'
 import { hexToBytes } from 'nostr-tools/utils'
 import { getPublicKey } from 'nostr-tools/pure'
 import getIdenticon from '../helpers/identicon'
-import { SimplePool } from 'nostr-tools/pool'
+import { pool, DEFAULT_RELAYS } from '../common'
 
 const MainContext = createContext()
 
 export const MainProvider = ({ children }) => {
   const [accounts, setAccounts] = useState([])
   const [defaultAccount, setDefaultAccount] = useState({ index: '', name: '', type: '' })
-
-  const pool = new SimplePool({
-    eoseSubTimeout: 3000,
-    getTimeout: 3000
-  })
 
   useEffect(() => {
     fetchData()
@@ -97,7 +92,7 @@ export const MainProvider = ({ children }) => {
         ]
       }
 
-      let relays = storage.relays
+      let relays = storage.relays?.length > 0 ? storage.relays : DEFAULT_RELAYS
       let events = await pool.querySync(relays, { kinds: [0], authors })
 
       events.forEach(async (item) => {
