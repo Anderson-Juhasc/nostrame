@@ -13,17 +13,16 @@ function buildSass() {
   const sassEntryFile = './src/assets/css/style.scss';  // Your main Sass file
   const cssOutputFile = './dist/assets/css/style.build.css'; // Output CSS file
 
-  const result = sass.renderSync({
-    file: sassEntryFile,
-    outFile: cssOutputFile,
+  const result = sass.compile(sassEntryFile, {
+    style: 'compressed',
     sourceMap: true,
-    outputStyle: 'compressed',
+    silenceDeprecations: ['import'],
   })
 
   fs.mkdirSync(path.dirname(cssOutputFile), { recursive: true })
   fs.writeFileSync(cssOutputFile, result.css)
-  if (result.map) {
-    fs.writeFileSync(`${cssOutputFile}.map`, result.map)
+  if (result.sourceMap) {
+    fs.writeFileSync(`${cssOutputFile}.map`, JSON.stringify(result.sourceMap))
   }
 
   console.log('Sass compiled successfully')
