@@ -3,6 +3,7 @@ import { HashRouter as Router, Route, Routes } from 'react-router-dom'
 import { createRoot } from 'react-dom/client'
 import { AuthProvider } from './middlewares/AuthContext'
 import PrivateRoute from './middlewares/PrivateRoute'
+import ErrorBoundary from './components/ErrorBoundary'
 import MainLayout from './layouts/MainLayout'
 import HomePage from './pages/HomePage'
 import SigninPage from './pages/SigninPage'
@@ -13,8 +14,9 @@ import GeneratorPage from './pages/GeneratorPage'
 
 const App = () => {
   return (
-    <AuthProvider>
-      <Router>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
         <Routes>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<HomePage />} />
@@ -27,8 +29,9 @@ const App = () => {
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

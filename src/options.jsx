@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import React, { useState, useEffect } from 'react'
 import { ToastContainer } from 'react-toastify'
 
+import ErrorBoundary from './components/ErrorBoundary'
 import ChangePassword from './components/ChangePassword'
 import ResetVault from './components/ResetVault'
 import Relays from './components/Relays'
@@ -77,5 +78,9 @@ function Options() {
 }
 
 const container = document.getElementById('main')
-const root = createRoot(container) // createRoot(container!) if you use TypeScript
-root.render(<Options />)
+const root = createRoot(container)
+root.render(
+  <ErrorBoundary>
+    <Options />
+  </ErrorBoundary>
+)
