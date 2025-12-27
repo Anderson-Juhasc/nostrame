@@ -12,7 +12,9 @@ import {
   updatePermission,
   showNotification,
   getPosition,
-  getSessionVault
+  getSessionVault,
+  clearSessionPassword,
+  clearSessionVault
 } from './common'
 
 let openPrompt = null
@@ -20,6 +22,36 @@ let promptMutex = new Mutex()
 let releasePromptMutex = () => {}
 let secretsCache = new LRUCache(100)
 let lastUsedAccount = null
+
+// Auto-lock timeout (default 5 minutes)
+const DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000
+let lockTimeout = null
+
+async function lockVault() {
+  const { isAuthenticated } = await browser.storage.local.get(['isAuthenticated'])
+  if (!isAuthenticated) return // Don't lock if not authenticated
+
+  await clearSessionPassword()
+  await clearSessionVault()
+  await browser.storage.local.set({ isLocked: true })
+  clearAllCaches()
+}
+
+async function resetLockTimer() {
+  if (lockTimeout) {
+    clearTimeout(lockTimeout)
+  }
+
+  // Check if vault is unlocked before setting timer
+  const { isLocked, isAuthenticated } = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
+  if (!isAuthenticated || isLocked) return
+
+  // Get timeout setting (default 5 minutes)
+  const { autoLockTimeout = DEFAULT_LOCK_TIMEOUT } = await browser.storage.local.get(['autoLockTimeout'])
+  if (autoLockTimeout <= 0) return // Disabled if 0 or negative
+
+  lockTimeout = setTimeout(lockVault, autoLockTimeout)
+}
 
 function clearAllCaches() {
   secretsCache.clear()
@@ -58,21 +90,28 @@ const height = 360
 browser.runtime.onInstalled.addListener(async (_, __, reason) => {
   if (reason === 'install') browser.runtime.openOptionsPage()
 
-  // Set default relays
+  // Set default relays and auto-lock timeout
   await browser.storage.local.set({
     "relays": [
       "wss://relay.damus.io",
       "wss://nos.lol",
       "wss://nostr.bitcoiner.social",
       "wss://offchain.pub",
-    ]
+    ],
+    "autoLockTimeout": DEFAULT_LOCK_TIMEOUT
   })
 
   // Cleanup: remove unencrypted vault from local storage (security fix)
   await browser.storage.local.remove(['vault'])
 })
 
+// Start lock timer on extension startup
+resetLockTimer()
+
 browser.runtime.onMessage.addListener(async (message, sender) => {
+  // Reset lock timer on any message (user activity)
+  resetLockTimer()
+
   if (message.openSignUp) {
     openSignUpWindow()
     browser.windows.remove(sender.tab.windowId)
@@ -88,6 +127,9 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
 browser.runtime.onMessageExternal.addListener(
   async ({type, params}, sender) => {
+    // Reset lock timer on external message (user activity)
+    resetLockTimer()
+
     let extensionId = new URL(sender.url).host
     return handleContentScriptMessage({type, params, host: extensionId})
   }
@@ -105,9 +147,18 @@ browser.storage.onChanged.addListener((changes, area) => {
   // Clear all caches when vault changes (account switch) or vault locks
   if (area === 'session' && changes.vault) {
     clearAllCaches()
+    resetLockTimer() // Reset timer on vault activity
   }
   if (changes.isLocked?.newValue === true) {
     clearAllCaches()
+    if (lockTimeout) {
+      clearTimeout(lockTimeout)
+      lockTimeout = null
+    }
+  }
+  // Reset timer when vault is unlocked
+  if (changes.isLocked?.newValue === false) {
+    resetLockTimer()
   }
 })
 
