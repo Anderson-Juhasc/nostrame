@@ -15,6 +15,8 @@ const Signup = () => {
   const { updateAccounts } = useContext(MainContext)
 
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const [vault, setVault] = useState({
     mnemonic: '',
     passphrase: '',
@@ -40,6 +42,17 @@ const Signup = () => {
 
   async function saveAccount(e) {
     e.preventDefault()
+    setPasswordError('')
+
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters')
+      return
+    }
 
     const vaultData = {
       mnemonic: vault.mnemonic,
@@ -113,9 +126,26 @@ const Signup = () => {
               placeholder="Password"
               name="password"
               required
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <br />
+            <input
+              type="password"
+              autoComplete="off"
+              placeholder="Confirm password"
+              name="confirmPassword"
+              required
+              minLength={8}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            {passwordError && (
+              <div style={{ color: '#e74c3c', marginTop: '8px', fontSize: '14px' }}>
+                {passwordError}
+              </div>
+            )}
             <br />
             <button type="submit" className="btn">Save</button>
             <br />
