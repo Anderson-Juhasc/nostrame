@@ -16,7 +16,10 @@ const Accounts = () => {
   const [showImportAccountModal, setShowImportAccountModal] = useState(false)
   const [showDeriveAccount, setShowDeriveAccount] = useState(false)
 
-  const pool = new SimplePool()
+  const pool = new SimplePool({
+    eoseSubTimeout: 3000,
+    getTimeout: 3000
+  })
   const navigate = useNavigate()
 
   useEffect(() => {

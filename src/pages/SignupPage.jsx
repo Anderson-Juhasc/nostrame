@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
+import { bytesToHex } from 'nostr-tools/utils'
 import { Link, Navigate } from 'react-router-dom'
 import { encrypt } from '../common'
 import { useAuth } from '../middlewares/AuthContext';
@@ -48,7 +49,7 @@ const Signup = () => {
       importedAccounts: [],
     }
 
-    const prvKey = privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex)
+    const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex))
     vaultData.accounts.push({
       prvKey,
     })

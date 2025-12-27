@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
+import { bytesToHex } from 'nostr-tools/utils'
 import { SimplePool } from 'nostr-tools/pool'
 import { finalizeEvent } from 'nostr-tools/pure'
 import { encrypt } from '../common'
@@ -29,14 +30,17 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     const vault = storage.vault
 
     vault.accountIndex++
-    const prvKey = privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vault.accountIndex)
+    const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vault.accountIndex))
     vault.accounts.push({
       prvKey,
     })
     vault.accountDefault = prvKey
 
     if (name || name !== '') {
-      const pool = new SimplePool()
+      const pool = new SimplePool({
+      eoseSubTimeout: 3000,
+      getTimeout: 3000
+    })
       const relays = storage.relays
       const event = {
         kind: 0,

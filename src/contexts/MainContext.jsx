@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { createContext, useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
-import { hexToBytes } from '@noble/hashes/utils'
+import { hexToBytes } from 'nostr-tools/utils'
 import { getPublicKey } from 'nostr-tools/pure'
 import getIdenticon from '../helpers/identicon'
 import { SimplePool } from 'nostr-tools/pool'
@@ -12,7 +12,10 @@ export const MainProvider = ({ children }) => {
   const [accounts, setAccounts] = useState([])
   const [defaultAccount, setDefaultAccount] = useState({ index: '', name: '', type: '' })
 
-  const pool = new SimplePool()
+  const pool = new SimplePool({
+    eoseSubTimeout: 3000,
+    getTimeout: 3000
+  })
 
   useEffect(() => {
     fetchData()

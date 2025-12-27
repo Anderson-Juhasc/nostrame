@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom';
 import * as nip19 from 'nostr-tools/nip19'
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
+import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { encrypt } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'

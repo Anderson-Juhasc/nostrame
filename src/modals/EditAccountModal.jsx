@@ -5,7 +5,10 @@ import { finalizeEvent } from 'nostr-tools/pure'
 import Modal from './Modal'
 
 const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
-  const pool = new SimplePool()
+  const pool = new SimplePool({
+    eoseSubTimeout: 3000,
+    getTimeout: 3000
+  })
 
   const [showModal, setShowModal] = useState(isOpen);
   const [account, setAccount] = useState({

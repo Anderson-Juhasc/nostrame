@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
 import * as nip19 from 'nostr-tools/nip19'
-import { hexToBytes, bytesToHex } from '@noble/hashes/utils'
+import { hexToBytes, bytesToHex } from 'nostr-tools/utils'
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { encrypt } from '../common'
 import Modal from './Modal'

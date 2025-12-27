@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as nip19 from 'nostr-tools/nip19'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
-import { hexToBytes } from '@noble/hashes/utils'
+import { bytesToHex } from 'nostr-tools/utils'
 import { getPublicKey } from 'nostr-tools/pure'
 import { encrypt } from '../common'
 import MainContext from '../contexts/MainContext'
@@ -29,9 +29,10 @@ const GeneratorPage = () => {
 
   const generateRandomAccount = () => {
     const mnemonic = generateSeedWords()
-    const prvKey = privateKeyFromSeedWords(mnemonic)
-    const nsec = nip19.nsecEncode(hexToBytes(prvKey))
-    const pubKey = getPublicKey(prvKey)
+    const prvKeyBytes = privateKeyFromSeedWords(mnemonic)
+    const prvKey = bytesToHex(prvKeyBytes)
+    const nsec = nip19.nsecEncode(prvKeyBytes)
+    const pubKey = getPublicKey(prvKeyBytes)
     const npub = nip19.npubEncode(pubKey)
 
     setAccount({
