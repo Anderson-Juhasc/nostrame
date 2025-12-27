@@ -37,11 +37,9 @@ function getSharedSecret(sk, peer) {
   return key
 }
 
-//set the width and height of the prompt window
 const width = 340
 const height = 360
 
-// Function to handle when the extension is installed or updated
 browser.runtime.onInstalled.addListener(async (_, __, reason) => {
   if (reason === 'install') browser.runtime.openOptionsPage()
 

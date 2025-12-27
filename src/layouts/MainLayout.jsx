@@ -14,8 +14,6 @@ const MainLayout = () => {
 
   const fetchData = useCallback(async () => {
     const storage = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
-
-    // If authenticated but no session password, treat as locked
     const hasPassword = await hasSessionPassword()
     if (storage.isAuthenticated && !hasPassword) {
       setIsLocked(true)

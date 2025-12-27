@@ -45,7 +45,6 @@ const VaultPage = () => {
     setPermissions(hostData)
   }, [])
 
-  // Load permissions and listen for changes
   useEffect(() => {
     loadPermissions()
 
@@ -88,7 +87,6 @@ const VaultPage = () => {
     setExpandedHosts(prev => ({ ...prev, [host]: !prev[host] }))
   }
 
-  // Get visible hosts based on showAllHosts state
   const policyEntries = Object.entries(policies)
   const visibleHosts = showAllHosts ? policyEntries : policyEntries.slice(0, INITIAL_HOSTS_LIMIT)
   const hasMoreHosts = policyEntries.length > INITIAL_HOSTS_LIMIT

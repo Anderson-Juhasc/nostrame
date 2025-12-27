@@ -31,14 +31,11 @@ const Accounts = () => {
   }
 
   const lockVault = async () => {
-    // Clear session password
     await clearSessionPassword()
-
     await browser.storage.local.set({
       isLocked: true,
       vault: { accounts: [] },
     })
-    // Don't reload - storage change listener will update the UI
   }
 
   return (

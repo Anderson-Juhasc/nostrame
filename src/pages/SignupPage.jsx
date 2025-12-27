@@ -58,7 +58,6 @@ const Signup = () => {
 
     const encryptedVault = encrypt(vaultData, password)
 
-    // Store password in session storage (persists across popup opens)
     await setSessionPassword(password)
 
     await browser.storage.local.set({

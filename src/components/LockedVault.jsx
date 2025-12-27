@@ -14,16 +14,13 @@ const LockedVault = ({ fetchData }) => {
       const storage = await browser.storage.local.get(['encryptedVault'])
       const vaultData = decrypt(storage.encryptedVault, password)
 
-      // Store password in session storage (persists across popup opens)
       await setSessionPassword(password)
-
       await browser.storage.local.set({
         isLocked: false,
         vault: vaultData,
       })
 
       setPassword('')
-      // Notify parent to re-check state
       if (fetchData) fetchData()
     } catch (err) {
       setError('Invalid password')
