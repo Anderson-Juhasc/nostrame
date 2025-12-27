@@ -47,7 +47,7 @@ const GeneratorPage = () => {
   const importAccount = async () => {
     const storage = await browser.storage.local.get(['vault'])
     const vault = storage.vault
-    const password = getSessionPassword()
+    const password = await getSessionPassword()
 
     if (!password) {
       alert('Session expired. Please unlock your vault again.')

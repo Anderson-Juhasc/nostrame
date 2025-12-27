@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { decrypt, setSessionPassword } from '../common'
 
-const LockedVault = () => {
+const LockedVault = ({ fetchData }) => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
@@ -14,8 +14,8 @@ const LockedVault = () => {
       const storage = await browser.storage.local.get(['encryptedVault'])
       const vaultData = decrypt(storage.encryptedVault, password)
 
-      // Store password in session memory only (not in storage)
-      setSessionPassword(password)
+      // Store password in session storage (persists across popup opens)
+      await setSessionPassword(password)
 
       await browser.storage.local.set({
         isLocked: false,
@@ -23,7 +23,8 @@ const LockedVault = () => {
       })
 
       setPassword('')
-      window.location.reload()
+      // Notify parent to re-check state
+      if (fetchData) fetchData()
     } catch (err) {
       setError('Invalid password')
       setPassword('')

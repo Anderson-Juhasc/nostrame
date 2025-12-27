@@ -40,7 +40,7 @@ const ChangePassword = ({ fetchData }) => {
     try {
       const decryptedVault = decrypt(storage.encryptedVault, changePassword.currentPassword)
       const encryptedVault = encrypt(decryptedVault, changePassword.newPassword)
-      setSessionPassword(changePassword.newPassword)
+      await setSessionPassword(changePassword.newPassword)
       await browser.storage.local.set({
         encryptedVault,
       })

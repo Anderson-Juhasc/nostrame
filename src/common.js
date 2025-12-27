@@ -18,26 +18,49 @@ export const DEFAULT_RELAYS = [
 
 // ============================================================================
 // SESSION PASSWORD MANAGER
-// Password is kept in memory only - never stored to disk
-// This is more secure than storing in browser.storage
+// Password is stored in browser.storage.session - persists across popup
+// opens/closes but clears when browser closes (more secure than local storage)
 // ============================================================================
 
-let sessionPassword = null
-
-export function setSessionPassword(password) {
-  sessionPassword = password
+// Get the session storage API (chrome.storage.session or browser.storage.session)
+function getSessionStorage() {
+  // Try browser.storage.session first (Firefox/polyfill)
+  if (typeof browser !== 'undefined' && browser.storage?.session) {
+    return browser.storage.session
+  }
+  // Fall back to chrome.storage.session (Chrome native)
+  if (typeof chrome !== 'undefined' && chrome.storage?.session) {
+    return chrome.storage.session
+  }
+  return null
 }
 
-export function getSessionPassword() {
-  return sessionPassword
+export async function setSessionPassword(password) {
+  const sessionStorage = getSessionStorage()
+  if (sessionStorage) {
+    await sessionStorage.set({ sessionPassword: password })
+  }
 }
 
-export function clearSessionPassword() {
-  sessionPassword = null
+export async function getSessionPassword() {
+  const sessionStorage = getSessionStorage()
+  if (sessionStorage) {
+    const result = await sessionStorage.get('sessionPassword')
+    return result.sessionPassword || null
+  }
+  return null
 }
 
-export function hasSessionPassword() {
-  return sessionPassword !== null
+export async function clearSessionPassword() {
+  const sessionStorage = getSessionStorage()
+  if (sessionStorage) {
+    await sessionStorage.remove('sessionPassword')
+  }
+}
+
+export async function hasSessionPassword() {
+  const password = await getSessionPassword()
+  return password !== null
 }
 
 function deriveKey(password, salt) {

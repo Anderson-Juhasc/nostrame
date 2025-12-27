@@ -20,7 +20,7 @@ const ImportVault = ({ fetchData }) => {
         const encryptedVault = (JSON.parse(reader.result)).vault
         try {
           const vaultData = decrypt(encryptedVault, password)
-          setSessionPassword(password)
+          await setSessionPassword(password)
           await browser.storage.local.set({
             vault: vaultData,
             encryptedVault,

@@ -98,7 +98,7 @@ const VaultPage = () => {
     }
 
     const { vault } = await browser.storage.local.get(['vault'])
-    const password = getSessionPassword()
+    const password = await getSessionPassword()
 
     if (!password) {
       alert('Session expired. Please unlock your vault again.')
@@ -117,7 +117,7 @@ const VaultPage = () => {
     }
   }
 
-  if (loading) {
+  if (loading || !defaultAccount.npub) {
     return (
       <div className="Popup">
         <div className="container">Loading...</div>

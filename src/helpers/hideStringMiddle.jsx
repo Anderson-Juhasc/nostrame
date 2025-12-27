@@ -1,4 +1,7 @@
   export default function hideStringMiddle(inputString, startChars = 10, endChars = 8) {
+    if (!inputString) {
+        return ''
+    }
     if (inputString.length <= startChars + endChars) {
         return inputString; // Return the string as is if its length is less than or equal to the combined length of startChars and endChars
     }

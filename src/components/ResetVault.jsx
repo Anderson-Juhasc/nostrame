@@ -5,7 +5,7 @@ import { clearSessionPassword } from '../common'
 const ResetVault = ({ fetchData }) => {
   const handleResetVault = async () => {
     if (confirm("Are you sure you want to reset the vault? Make sure if you have made a backup before you continue.")) {
-      clearSessionPassword()
+      await clearSessionPassword()
       await browser.storage.local.set({
         encryptedVault: '',
         vault: {},
