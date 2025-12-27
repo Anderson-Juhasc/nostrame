@@ -1,57 +1,41 @@
-import browser from 'webextension-polyfill'
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import { useStorage } from '../hooks/useStorage'
 
 const Relays = () => {
   const [relay, setRelay] = useState('')
-  const [relays, setRelays] = useState([])
-
-  useEffect(() => {
-    fetchData()
-
-    browser.storage.onChanged.addListener(function() {
-      fetchData()
-    })
-  }, [])
-  
-  const fetchData = async () => {
-    const storage = await browser.storage.local.get(['relays'])
-    setRelays(storage.relays)
-  }
+  const [relays, setRelays, loading] = useStorage('relays', [])
 
   const addNewRelay = async (e) => {
     e.preventDefault()
 
+    if (!relays) return
+
     const relayExist = relays.find(item => item === relay)
     if (relayExist) {
-      alert('Please provide a not existing relay')
+      alert('Relay already exists')
       setRelay('')
-      return false
+      return
     }
 
-    relays.push(relay)
-    setRelays(relays)
+    await setRelays([...relays, relay])
     setRelay('')
-    await browser.storage.local.set({ 
-      relays: relays,
-    })
   }
 
   const removeRelay = async (index) => {
     const newRelays = [...relays]
-    if (index !== -1) {
-      newRelays.splice(index, 1)
-      setRelays(newRelays)
-    }
-    await browser.storage.local.set({ 
-      relays: newRelays,
-    })
+    newRelays.splice(index, 1)
+    await setRelays(newRelays)
+  }
+
+  if (loading) {
+    return <div>Loading relays...</div>
   }
 
   return (
     <>
       <form onSubmit={addNewRelay}>
         <h2>Relays</h2>
-        <input 
+        <input
           type="text"
           name="relay"
           value={relay}
@@ -64,7 +48,7 @@ const Relays = () => {
       </form>
 
       <ul>
-        {relays.map((relay, index) => (
+        {relays?.map((relay, index) => (
           <li key={index}>
             {relay}
             &nbsp;
@@ -75,4 +59,5 @@ const Relays = () => {
     </>
   )
 }
+
 export default Relays
