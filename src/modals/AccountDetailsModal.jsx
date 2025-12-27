@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {QRCodeSVG} from 'qrcode.react'
+import * as nip49 from 'nostr-tools/nip49'
+import { hexToBytes } from 'nostr-tools/utils'
 import Modal from './Modal'
 
 const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
@@ -7,6 +9,9 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
   const [account, setAccount] = useState({})
   const [format, setFormat] = useState('bech32')
   const [showSecret, setShowSecret] = useState(false)
+  const [showNcryptsec, setShowNcryptsec] = useState(false)
+  const [ncryptsecPassword, setNcryptsecPassword] = useState('')
+  const [ncryptsec, setNcryptsec] = useState('')
 
   useEffect(() => {
     setShowModal(isOpen)
@@ -19,7 +24,26 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
   const closeModal = () => {
     setShowModal(false)
     setShowSecret(false)
+    setShowNcryptsec(false)
+    setNcryptsecPassword('')
+    setNcryptsec('')
     onClose()
+  }
+
+  const generateNcryptsec = async (e) => {
+    e.preventDefault()
+    if (!ncryptsecPassword) {
+      alert('Please enter a password')
+      return
+    }
+    try {
+      const prvKeyBytes = hexToBytes(account.prvKey)
+      const encrypted = await nip49.encrypt(prvKeyBytes, ncryptsecPassword)
+      setNcryptsec(encrypted)
+    } catch (err) {
+      console.log(err)
+      alert('Error generating ncryptsec')
+    }
   }
 
   const copyToClipboard = (e, text) => {
@@ -35,7 +59,7 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
   return (
     <div>
       <Modal isOpen={showModal} onClose={closeModal}>
-        { !showSecret ? ( 
+        { !showSecret && !showNcryptsec ? (
           <>
             <h2 style={{ textAlign: 'center' }}>{account.name}</h2>
             <div style={{ height: "auto", margin: "0 auto", maxWidth: 200, width: "100%" }}>
@@ -60,8 +84,10 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
             </p>
 
             <button className="btn" onClick={() => setShowSecret(true)}>Show private key</button>
+            <br />
+            <button className="btn" onClick={() => setShowNcryptsec(true)}>Export encrypted (NIP-49)</button>
           </>
-        ) : (
+        ) : showSecret ? (
           <>
             <h2 style={{ textAlign: 'center' }}>Private key</h2>
             <div style={{ height: "auto", margin: "0 auto", maxWidth: 200, width: "100%" }}>
@@ -86,6 +112,47 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
             </p>
 
             <button className="btn" onClick={() => setShowSecret(false)}>Back</button>
+          </>
+        ) : (
+          <>
+            <h2 style={{ textAlign: 'center' }}>Export Encrypted Key</h2>
+            {!ncryptsec ? (
+              <form onSubmit={generateNcryptsec}>
+                <p>Enter a password to encrypt your private key (NIP-49):</p>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Encryption password"
+                  value={ncryptsecPassword}
+                  onChange={(e) => setNcryptsecPassword(e.target.value)}
+                  required
+                />
+                <br />
+                <button type="submit" className="btn">Generate ncryptsec</button>
+                <br />
+                <button type="button" className="btn" onClick={() => { setShowNcryptsec(false); setNcryptsecPassword(''); }}>Back</button>
+              </form>
+            ) : (
+              <>
+                <div style={{ height: "auto", margin: "0 auto", maxWidth: 200, width: "100%" }}>
+                  <QRCodeSVG
+                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                    size={256}
+                    value={ncryptsec}
+                  />
+                </div>
+                <p className="break-string">
+                  <strong>ncryptsec:</strong>
+                  <br />
+                  {ncryptsec}
+                  &nbsp;
+                  <a href="#" onClick={(e) => copyToClipboard(e, ncryptsec)} title="Copy">
+                    <i className="icon-copy"></i>
+                  </a>
+                </p>
+                <button className="btn" onClick={() => { setShowNcryptsec(false); setNcryptsecPassword(''); setNcryptsec(''); }}>Back</button>
+              </>
+            )}
           </>
         )}
       </Modal>

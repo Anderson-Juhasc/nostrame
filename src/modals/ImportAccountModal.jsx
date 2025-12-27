@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom';
 import * as nip19 from 'nostr-tools/nip19'
+import * as nip49 from 'nostr-tools/nip49'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { encrypt } from '../common'
 import Modal from './Modal'
@@ -11,9 +12,11 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
   const { updateAccounts } = useContext(MainContext)
 
   const navigate = useNavigate()
-  
+
   const [showModal, setShowModal] = useState(isOpen)
   const [prvKey, setPrvKey] = useState('')
+  const [ncryptsecPassword, setNcryptsecPassword] = useState('')
+  const [isNcryptsec, setIsNcryptsec] = useState(false)
 
   useEffect(() => {
     setShowModal(isOpen)
@@ -21,7 +24,16 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
   const closeModal = () => {
     setShowModal(false)
+    setPrvKey('')
+    setNcryptsecPassword('')
+    setIsNcryptsec(false)
     onClose()
+  }
+
+  const handlePrvKeyChange = (e) => {
+    const value = e.target.value
+    setPrvKey(value)
+    setIsNcryptsec(/^ncryptsec/.test(value))
   }
 
   const importAccount = async (e) => {
@@ -30,7 +42,42 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
     const storage = await browser.storage.local.get(['vault', 'password'])
     const vault = storage.vault
 
-    if (/^nsec/.test(prvKey)) {
+    if (/^ncryptsec/.test(prvKey)) {
+      try {
+        if (!ncryptsecPassword) {
+          alert('Please enter the decryption password')
+          return false
+        }
+        const prvKeyBytes = await nip49.decrypt(prvKey, ncryptsecPassword)
+        const prvKeyHex = bytesToHex(prvKeyBytes)
+
+        const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
+        const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
+        if (prvKeyExist || prvKeyExistInDerived) {
+          alert('Please provide a not existing private key')
+          setPrvKey('')
+          setNcryptsecPassword('')
+          setIsNcryptsec(false)
+          return false
+        }
+
+        vault.importedAccounts.push({ prvKey: prvKeyHex })
+        vault.accountDefault = prvKeyHex
+        const encryptedVault = encrypt(vault, storage.password)
+        await browser.storage.local.set({
+          vault,
+          encryptedVault,
+        })
+        await updateAccounts()
+
+        callBack()
+        navigate('/vault')
+      } catch (err) {
+        console.log(err)
+        alert('Invalid ncryptsec or wrong password')
+        setNcryptsecPassword('')
+      }
+    } else if (/^nsec/.test(prvKey)) {
       try {
         let {type, data} = nip19.decode(prvKey)
 
@@ -106,12 +153,25 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           <input
             type="text"
             autoComplete="off"
-            placeholder="nsec or hex"
+            placeholder="nsec, ncryptsec or hex"
             name="prvKey"
             required
             value={prvKey}
-            onChange={(e) => setPrvKey(e.target.value)}
+            onChange={handlePrvKeyChange}
           />
+          {isNcryptsec && (
+            <>
+              <br />
+              <input
+                type="password"
+                autoComplete="off"
+                placeholder="Decryption password"
+                value={ncryptsecPassword}
+                onChange={(e) => setNcryptsecPassword(e.target.value)}
+                required
+              />
+            </>
+          )}
           <br />
           <button type="submit" className="btn">Import</button>
         </form>
