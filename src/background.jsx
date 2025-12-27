@@ -21,10 +21,16 @@ let secretsCache = new LRUCache(100)
 let accountDefault = null
 let previousSk = null
 
+function clearSecrets() {
+  secretsCache.clear()
+  accountDefault = null
+  previousSk = null
+}
+
 function getSharedSecret(sk, peer) {
-  // Detect a key change and erase the cache if they changed their key
   if (previousSk !== sk) {
     secretsCache.clear()
+    previousSk = sk
   }
 
   let key = secretsCache.get(peer)
@@ -86,6 +92,9 @@ browser.storage.onChanged.addListener((changes, area) => {
   for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
     if (key === 'vault' && newValue?.accountDefault) {
       accountDefault = newValue.accountDefault
+    }
+    if (key === 'isLocked' && newValue === true) {
+      clearSecrets()
     }
   }
 })
