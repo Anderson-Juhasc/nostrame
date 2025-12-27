@@ -88,8 +88,8 @@ const Accounts = () => {
     <>
       <div className="account" ref={dropdownRef}>
         <a href="#" className="account-profile" onClick={(e) => { e.preventDefault(); toggleDropdown() }}>
-          <span style={{ transition: 'transform 0.2s', transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>&#x25BC;</span>
-          <img className="account-profile__img" src={defaultAccount.picture} style={{ borderRadius: '50%', border: '2px solid #4a9eff' }} alt="" />
+          <span className={`account-profile__arrow ${isDropdownOpen ? 'open' : ''}`}>&#x25BC;</span>
+          <img className="account-profile__img" src={defaultAccount.picture} alt="" />
           <div className="account-profile__body">
             <strong className="account-profile__name">
               {!defaultAccount.type
@@ -102,7 +102,7 @@ const Accounts = () => {
         </a>
 
         {isDropdownOpen && (
-          <div className="account-dropdown" style={{ minWidth: '280px' }}>
+          <div className="account-dropdown">
             <div className="account-dropdown__head">
               <div>
                 <div className="account-dropdown__title">Accounts</div>
@@ -114,7 +114,7 @@ const Accounts = () => {
 
             <div className="account-items">
               {accounts.length === 0 ? (
-                <div style={{ padding: '15px', textAlign: 'center', color: '#aaa' }}>
+                <div className="account-items__loading">
                   Loading accounts...
                 </div>
               ) : accounts.map((account) => {
@@ -125,36 +125,23 @@ const Accounts = () => {
                 return (
                   <div
                     key={account.prvKey}
-                    className={isCurrentAccount ? "account-dropdown__item current" : "account-dropdown__item"}
-                    style={isCurrentAccount ? { background: 'rgba(74, 158, 255, 0.2)', borderLeft: '3px solid #4a9eff' } : {}}
+                    className={`account-dropdown__item ${isCurrentAccount ? 'current' : ''}`}
                   >
-                    <a href="#" onClick={(e) => { e.preventDefault(); changeDefaultAccount(account.prvKey) }} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <img src={account.picture} height="30" width="30" style={{ borderRadius: '50%', border: isCurrentAccount ? '2px solid #4a9eff' : '2px solid #fff' }} alt="" />
+                    <a href="#" onClick={(e) => { e.preventDefault(); changeDefaultAccount(account.prvKey) }}>
+                      <div className={`account-dropdown__avatar ${isCurrentAccount ? 'current' : ''}`}>
+                        <img src={account.picture} alt="" />
                         {isCurrentAccount && (
-                          <span style={{
-                            position: 'absolute',
-                            bottom: '-2px',
-                            right: '-2px',
-                            background: '#4a9eff',
-                            borderRadius: '50%',
-                            width: '14px',
-                            height: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '10px'
-                          }}>✓</span>
+                          <span className="account-dropdown__badge">✓</span>
                         )}
                       </div>
-                      <div style={{ flex: 1, marginLeft: '8px', minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div className="account-dropdown__info">
+                        <div className="account-dropdown__name-row">
+                          <strong className="account-dropdown__name">
                             {displayName}
                           </strong>
-                          {account.type === "imported" && <small style={{ color: '#888', flexShrink: 0 }}>Imported</small>}
+                          {account.type === "imported" && <small className="account-dropdown__tag">Imported</small>}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#aaa', fontFamily: 'monospace' }}>
+                        <div className="account-dropdown__npub">
                           {account.npub ? hideStringMiddle(account.npub, 8, 6) : '...'}
                         </div>
                       </div>

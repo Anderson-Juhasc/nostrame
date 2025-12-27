@@ -431,21 +431,38 @@ body {
   position: absolute;
   right: 0;
   z-index: 1000;
+  min-width: 280px;
 }
 
 .account-dropdown__item {
+  padding: 5px 10px;
+
   &:hover {
     background: rgba(#333, .7);
   }
+
   &.current {
-    background: #333;
+    background: rgba(74, 158, 255, 0.2);
+    border-left: 3px solid #4a9eff;
+  }
+
+  a {
+    display: flex;
+    align-items: center;
+    width: 100%;
   }
 }
 
 .account-items {
   border: 1px solid rgba(#fff, .6);
-  overflow-y: scroll;
-  height: 150px;
+  overflow-y: auto;
+  max-height: 150px;
+}
+
+.account-items__loading {
+  padding: 15px;
+  text-align: center;
+  color: #aaa;
 }
 
 .account-dropdown__head {
@@ -474,13 +491,17 @@ body {
   align-items: center;
 }
 
+.account-profile__arrow {
+  transition: transform 0.2s;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
 .account-profile__body {
   flex: 1;
   text-align: right;
-}
-
-.account-dropdown__item {
-  padding: 5px 10px;
 }
 
 .account-profile__img {
@@ -489,6 +510,66 @@ body {
   height: 35px;
   margin: 0 2px 0 5px;
   width: 35px;
+  border: 2px solid #4a9eff;
+}
+
+.account-dropdown__avatar {
+  position: relative;
+  flex-shrink: 0;
+
+  img {
+    border-radius: 50%;
+    border: 2px solid #fff;
+    height: 30px;
+    width: 30px;
+  }
+
+  &.current img {
+    border-color: #4a9eff;
+  }
+}
+
+.account-dropdown__badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #4a9eff;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.account-dropdown__info {
+  flex: 1;
+  margin-left: 8px;
+  min-width: 0;
+}
+
+.account-dropdown__name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.account-dropdown__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-dropdown__tag {
+  color: #888;
+  flex-shrink: 0;
+}
+
+.account-dropdown__npub {
+  font-size: 11px;
+  color: #aaa;
+  font-family: monospace;
 }
 
 .profile {
