@@ -16,7 +16,6 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
   });
 
   useEffect(() => {
-    //setAccount(accountData)
     setAccount({
       name: accountData.name || '',
       about: accountData.about || '',
@@ -32,8 +31,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
   }, [isOpen])
 
   const closeModal = () => {
-    setShowModal(false);
-    //onClose()
+    setShowModal(false)
   }
 
   const accountChange = (e) => {
@@ -71,7 +69,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
       
       callBack()
     } catch (error) {
-      console.log(error)
+      console.error('Failed to update profile:', error)
     }
   }
 

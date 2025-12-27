@@ -29,7 +29,7 @@ const ImportVault = ({ fetchData }) => {
           setPassword('')
           fetchData()
         } catch (e) {
-          console.log(e)
+          alert('Invalid vault file or wrong password')
         }
       }
       reader.readAsText(file)

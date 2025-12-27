@@ -41,7 +41,6 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
       const encrypted = await nip49.encrypt(prvKeyBytes, ncryptsecPassword)
       setNcryptsec(encrypted)
     } catch (err) {
-      console.log(err)
       alert('Error generating ncryptsec')
     }
   }

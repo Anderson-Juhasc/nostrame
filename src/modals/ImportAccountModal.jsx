@@ -79,7 +79,6 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         callBack()
         navigate('/vault')
       } catch (err) {
-        console.log(err)
         alert('Invalid ncryptsec or wrong password')
         setNcryptsecPassword('')
       }
@@ -89,7 +88,6 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         if (type === 'nsec') {
           const prvKeyHex = bytesToHex(data)
-          //if (!vault.importedAccounts) { vault.importedAccounts = [] }
           const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
           const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
           if (prvKeyExist || prvKeyExistInDerived) {
@@ -111,7 +109,6 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           navigate('/vault')
         }
       } catch (e) {
-        console.log(e)
         alert('Please provide a valid private key')
         setPrvKey('')
       }
@@ -141,7 +138,6 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         navigate('/vault')
       } catch (e) {
-        console.log(e)
         alert('Please provide a valid private key')
         setPrvKey('')
       }
