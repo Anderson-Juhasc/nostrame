@@ -2,9 +2,8 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
-import { SimplePool } from 'nostr-tools/pool'
 import { finalizeEvent } from 'nostr-tools/pure'
-import { encrypt } from '../common'
+import { encrypt, getSessionPassword, pool, DEFAULT_RELAYS } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
 
@@ -26,8 +25,14 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
   const addAccount = async (e) => {
     e.preventDefault()
 
-    const storage = await browser.storage.local.get(['vault', 'password', 'relays'])
+    const storage = await browser.storage.local.get(['vault', 'relays'])
     const vault = storage.vault
+    const password = getSessionPassword()
+
+    if (!password) {
+      alert('Session expired. Please unlock your vault again.')
+      return
+    }
 
     vault.accountIndex++
     const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vault.accountIndex))
@@ -36,12 +41,8 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     })
     vault.accountDefault = prvKey
 
-    if (name || name !== '') {
-      const pool = new SimplePool({
-      eoseSubTimeout: 3000,
-      getTimeout: 3000
-    })
-      const relays = storage.relays
+    if (name && name !== '') {
+      const relays = storage.relays?.length > 0 ? storage.relays : DEFAULT_RELAYS
       const event = {
         kind: 0,
         created_at: Math.floor(Date.now() / 1000),
@@ -56,7 +57,7 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
       await Promise.any(pool.publish(relays, signedEvent))
     }
 
-    const encryptedVault = encrypt(vault, storage.password)
+    const encryptedVault = encrypt(vault, password)
     await browser.storage.local.set({ 
       vault,
       encryptedVault,

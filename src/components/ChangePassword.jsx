@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
-import { encrypt, decrypt } from '../common'
+import { encrypt, decrypt, setSessionPassword } from '../common'
 
 const ChangePassword = ({ fetchData }) => {
   const [changePassword, setChangePassword] = useState({
@@ -38,11 +38,11 @@ const ChangePassword = ({ fetchData }) => {
 
     const storage = await browser.storage.local.get(['encryptedVault'])
     try {
-      const decryptedVault = decrypt(storage.encryptedVault, changePassword.currentPassword) 
+      const decryptedVault = decrypt(storage.encryptedVault, changePassword.currentPassword)
       const encryptedVault = encrypt(decryptedVault, changePassword.newPassword)
-      await browser.storage.local.set({ 
+      setSessionPassword(changePassword.newPassword)
+      await browser.storage.local.set({
         encryptedVault,
-        password: changePassword.currentPassword
       })
       setChangePassword({
         currentPassword: '',

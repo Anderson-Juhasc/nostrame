@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
-import { decrypt } from '../common'
+import { decrypt, setSessionPassword } from '../common'
 
 const ImportVault = ({ fetchData }) => {
   const [file, setFile] = useState(null)
@@ -19,12 +19,12 @@ const ImportVault = ({ fetchData }) => {
       reader.onload = async () => {
         const encryptedVault = (JSON.parse(reader.result)).vault
         try {
-          const vaultData = decrypt(encryptedVault, password) 
-          await browser.storage.local.set({ 
+          const vaultData = decrypt(encryptedVault, password)
+          setSessionPassword(password)
+          await browser.storage.local.set({
             vault: vaultData,
             encryptedVault,
             isAuthenticated: true,
-            password
           })
           setPassword('')
           fetchData()

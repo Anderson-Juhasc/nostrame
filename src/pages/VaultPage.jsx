@@ -5,7 +5,7 @@ import copyToClipboard from '../helpers/copyToClipboard'
 import EditAccountModal from '../modals/EditAccountModal'
 import AccountDetailsModal from '../modals/AccountDetailsModal'
 import MainContext from '../contexts/MainContext'
-import { encrypt, removePermissions } from '../common'
+import { encrypt, removePermissions, getSessionPassword } from '../common'
 
 const VaultPage = () => {
   const { accounts, defaultAccount, loading, updateAccounts } = useContext(MainContext)
@@ -97,7 +97,14 @@ const VaultPage = () => {
       return
     }
 
-    const { vault, password } = await browser.storage.local.get(['vault', 'password'])
+    const { vault } = await browser.storage.local.get(['vault'])
+    const password = getSessionPassword()
+
+    if (!password) {
+      alert('Session expired. Please unlock your vault again.')
+      return
+    }
+
     const index = vault.importedAccounts.findIndex(item => item.prvKey === prvKey)
 
     if (index !== -1) {

@@ -16,6 +16,30 @@ export const DEFAULT_RELAYS = [
   "wss://offchain.pub",
 ]
 
+// ============================================================================
+// SESSION PASSWORD MANAGER
+// Password is kept in memory only - never stored to disk
+// This is more secure than storing in browser.storage
+// ============================================================================
+
+let sessionPassword = null
+
+export function setSessionPassword(password) {
+  sessionPassword = password
+}
+
+export function getSessionPassword() {
+  return sessionPassword
+}
+
+export function clearSessionPassword() {
+  sessionPassword = null
+}
+
+export function hasSessionPassword() {
+  return sessionPassword !== null
+}
+
 function deriveKey(password, salt) {
   const iterations = 10000
   const keyLength = 256

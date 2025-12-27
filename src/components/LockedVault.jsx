@@ -1,21 +1,33 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
-import { decrypt } from '../common'
+import { decrypt, setSessionPassword } from '../common'
 
 const LockedVault = () => {
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
 
   const unlockVault = async (e) => {
     e.preventDefault()
-    const storage = await browser.storage.local.get(['encryptedVault'])
-    const vaultData = decrypt(storage.encryptedVault, password) 
-    await browser.storage.local.set({ 
-      isLocked: false,
-      vault: vaultData,
-      password,
-    })
-    setPassword('')
-    window.location.reload()
+    setError('')
+
+    try {
+      const storage = await browser.storage.local.get(['encryptedVault'])
+      const vaultData = decrypt(storage.encryptedVault, password)
+
+      // Store password in session memory only (not in storage)
+      setSessionPassword(password)
+
+      await browser.storage.local.set({
+        isLocked: false,
+        vault: vaultData,
+      })
+
+      setPassword('')
+      window.location.reload()
+    } catch (err) {
+      setError('Invalid password')
+      setPassword('')
+    }
   }
 
   return (
@@ -38,6 +50,7 @@ const LockedVault = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {error && <div style={{ color: 'red', marginTop: '8px' }}>{error}</div>}
           <br />
           <button type="submit" className="btn">
             <i className="icon-unlocked"></i>
@@ -49,4 +62,5 @@ const LockedVault = () => {
     </div>
   )
 }
+
 export default LockedVault

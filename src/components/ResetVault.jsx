@@ -1,13 +1,14 @@
 import browser from 'webextension-polyfill'
 import React from 'react'
+import { clearSessionPassword } from '../common'
 
 const ResetVault = ({ fetchData }) => {
   const handleResetVault = async () => {
     if (confirm("Are you sure you want to reset the vault? Make sure if you have made a backup before you continue.")) {
-      await browser.storage.local.set({ 
+      clearSessionPassword()
+      await browser.storage.local.set({
         encryptedVault: '',
         vault: {},
-        password: '',
         isAuthenticated: false,
       })
       fetchData()

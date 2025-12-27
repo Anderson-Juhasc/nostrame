@@ -5,6 +5,7 @@ import hideStringMiddle from '../helpers/hideStringMiddle'
 import ImportAccountModal from '../modals/ImportAccountModal'
 import DeriveAccountModal from '../modals/DeriveAccountModal'
 import MainContext from '../contexts/MainContext'
+import { clearSessionPassword } from '../common'
 
 const Accounts = () => {
   const { accounts, defaultAccount, updateDefaultAccount } = useContext(MainContext)
@@ -30,10 +31,12 @@ const Accounts = () => {
   }
 
   const lockVault = async () => {
+    // Clear session password from memory
+    clearSessionPassword()
+
     await browser.storage.local.set({
       isLocked: true,
       vault: { accounts: [] },
-      password: '',
     })
     window.location.reload()
   }

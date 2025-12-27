@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import * as nip19 from 'nostr-tools/nip19'
 import * as nip49 from 'nostr-tools/nip49'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
-import { encrypt } from '../common'
+import { encrypt, getSessionPassword } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
 
@@ -39,8 +39,14 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
   const importAccount = async (e) => {
     e.preventDefault()
 
-    const storage = await browser.storage.local.get(['vault', 'password'])
+    const storage = await browser.storage.local.get(['vault'])
     const vault = storage.vault
+    const password = getSessionPassword()
+
+    if (!password) {
+      alert('Session expired. Please unlock your vault again.')
+      return
+    }
 
     if (/^ncryptsec/.test(prvKey)) {
       try {
@@ -63,7 +69,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         vault.importedAccounts.push({ prvKey: prvKeyHex })
         vault.accountDefault = prvKeyHex
-        const encryptedVault = encrypt(vault, storage.password)
+        const encryptedVault = encrypt(vault, password)
         await browser.storage.local.set({
           vault,
           encryptedVault,
@@ -93,7 +99,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           }
           vault.importedAccounts.push({ prvKey: prvKeyHex })
           vault.accountDefault = prvKeyHex
-          const encryptedVault = encrypt(vault, storage.password)
+          const encryptedVault = encrypt(vault, password)
           await browser.storage.local.set({ 
             vault,
             encryptedVault,
@@ -124,7 +130,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         vault.importedAccounts.push({ prvKey: prvKeyHex })
         vault.accountDefault = prvKeyHex
-        const encryptedVault = encrypt(vault, storage.password)
+        const encryptedVault = encrypt(vault, password)
         await browser.storage.local.set({ 
           vault,
           encryptedVault,

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { Link, Navigate } from 'react-router-dom'
-import { encrypt } from '../common'
+import { encrypt, setSessionPassword } from '../common'
 import { useAuth } from '../middlewares/AuthContext';
 import MainContext from '../contexts/MainContext'
 
@@ -57,11 +57,14 @@ const Signup = () => {
     vaultData.accountDefault = prvKey
 
     const encryptedVault = encrypt(vaultData, password)
-    await browser.storage.local.set({ 
+
+    // Store password in session memory only (not in storage)
+    setSessionPassword(password)
+
+    await browser.storage.local.set({
       vault: vaultData,
       encryptedVault,
       isAuthenticated: true,
-      password
     })
 
     await login()
