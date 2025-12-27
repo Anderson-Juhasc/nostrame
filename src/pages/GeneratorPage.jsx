@@ -6,6 +6,7 @@ import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { getPublicKey } from 'nostr-tools/pure'
 import { encrypt, getSessionPassword } from '../common'
+import Loading from '../components/Loading'
 import MainContext from '../contexts/MainContext'
 
 const GeneratorPage = () => {
@@ -126,11 +127,7 @@ const GeneratorPage = () => {
               <button type="button" className="btn" onClick={importAccount}>Import account</button>
             </>
           ) : (
-            <>
-              <div className="container">
-                Loading...
-              </div>
-            </>
+            <Loading />
           )}
         </>
       </div>

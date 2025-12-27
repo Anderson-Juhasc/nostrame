@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useStorage } from '../hooks/useStorage'
+import Loading from './Loading'
 
 const Relays = () => {
   const [relay, setRelay] = useState('')
@@ -28,7 +29,7 @@ const Relays = () => {
   }
 
   if (loading) {
-    return <div>Loading relays...</div>
+    return <Loading size="small" />
   }
 
   return (

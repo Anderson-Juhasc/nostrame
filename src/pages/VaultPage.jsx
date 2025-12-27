@@ -4,6 +4,7 @@ import hideStringMiddle from '../helpers/hideStringMiddle'
 import copyToClipboard from '../helpers/copyToClipboard'
 import EditAccountModal from '../modals/EditAccountModal'
 import AccountDetailsModal from '../modals/AccountDetailsModal'
+import Loading from '../components/Loading'
 import MainContext from '../contexts/MainContext'
 import { encrypt, removePermissions, getSessionPassword } from '../common'
 
@@ -120,7 +121,7 @@ const VaultPage = () => {
   if (loading || !defaultAccount.npub) {
     return (
       <div className="Popup">
-        <div className="container">Loading...</div>
+        <Loading />
       </div>
     )
   }
