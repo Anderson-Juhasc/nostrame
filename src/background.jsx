@@ -235,7 +235,9 @@ async function handleContentScriptMessage({type, params, host}) {
     } else {
       // ask for authorization
       try {
-        let id = Math.random().toString().slice(4)
+        const array = new Uint32Array(2)
+        crypto.getRandomValues(array)
+        let id = Array.from(array, x => x.toString(16)).join('')
 
         // Get current account to show in prompt
         const currentAccount = await getCurrentAccount()
