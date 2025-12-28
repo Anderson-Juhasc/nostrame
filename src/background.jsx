@@ -202,8 +202,9 @@ async function handleContentScriptMessage({type, params, host}) {
           relay2: type === 'nprofile' ? data.relays[2] : null
         }
         let result = ph
+        const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         Object.entries(replacements).forEach(([pattern, value]) => {
-          result = result.replace(new RegExp(`{ *${pattern} *}`, 'g'), value)
+          result = result.replace(new RegExp(`\\{ *${escapeRegex(pattern)} *\\}`, 'g'), value)
         })
 
         return result
