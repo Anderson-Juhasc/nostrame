@@ -118,6 +118,16 @@ const VaultPage = () => {
     }
   }
 
+  const isValidUrl = (url) => {
+    if (!url) return false
+    // Allow data: URLs for identicons/generated images
+    if (url.startsWith('data:image/')) return true
+    try {
+      const parsed = new URL(url)
+      return ['http:', 'https:'].includes(parsed.protocol)
+    } catch { return false }
+  }
+
   if (loading || !defaultAccount.npub) {
     return (
       <div className="Popup">
@@ -129,13 +139,13 @@ const VaultPage = () => {
   return (
     <div className="Popup">
       <div className="profile">
-        {defaultAccount.banner ? (
+        {isValidUrl(defaultAccount.banner) ? (
           <div className="profile__banner" style={{ backgroundImage: `url(${defaultAccount.banner})` }} />
         ) : (
           <div className="profile__banner" />
         )}
         <div className="profile__body">
-          <img className="profile__img" src={defaultAccount.picture} alt="" />
+          <img className="profile__img" src={isValidUrl(defaultAccount.picture) ? defaultAccount.picture : ''} alt="" />
           <ul className="profile__nav">
             <li>
               <a href="#" onClick={(e) => { e.preventDefault(); setEditAccountModal(true); setAccountEditing(defaultAccount) }}>
