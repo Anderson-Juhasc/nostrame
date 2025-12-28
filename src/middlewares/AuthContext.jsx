@@ -31,8 +31,9 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(true)
   }
 
-  const logout = () => {
+  const logout = async () => {
     setIsAuthenticated(false)
+    await browser.storage.local.remove('isAuthenticated')
   }
 
   return (
