@@ -94,7 +94,7 @@ export async function clearSessionVault() {
 }
 
 function deriveKey(password, salt) {
-  const iterations = 600000
+  const iterations = 10000
   const keyLength = 256
   return CryptoJS.PBKDF2(password, salt, { keySize: keyLength / 32, iterations: iterations })
 }
