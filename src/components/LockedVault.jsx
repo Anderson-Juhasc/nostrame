@@ -28,8 +28,8 @@ const LockedVault = ({ fetchData }) => {
 
   return (
     <div className="Popup">
-      <div className="header">
-        <h1>Nostrame</h1>
+      <div className="header header__brand">
+        <img src="assets/icons/logo.svg" alt="Nostrame" title="Nostrame" className="header__logo" />
       </div>
 
       <div className="container">

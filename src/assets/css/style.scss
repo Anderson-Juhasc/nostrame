@@ -416,6 +416,15 @@ body {
       color: rgba(#fff, .7);
     }
   }
+
+  &__brand {
+    justify-content: center;
+  }
+
+  &__logo {
+    width: 35px;
+    height: 35px;
+  }
 }
 
 .header-nav {
