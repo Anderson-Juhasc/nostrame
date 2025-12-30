@@ -23,9 +23,9 @@ let releasePromptMutex = () => {}
 let secretsCache = new LRUCache(100)
 let lastUsedAccount = null
 
-// Auto-lock timeout (default 5 minutes)
+// Auto-lock timeout (default 5 minutes in milliseconds, converted to minutes for alarms API)
 const DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000
-let lockTimeout = null
+const LOCK_ALARM_NAME = 'autoLockAlarm'
 
 async function lockVault() {
   const { isAuthenticated } = await browser.storage.local.get(['isAuthenticated'])
@@ -38,9 +38,8 @@ async function lockVault() {
 }
 
 async function resetLockTimer() {
-  if (lockTimeout) {
-    clearTimeout(lockTimeout)
-  }
+  // Clear any existing alarm
+  await chrome.alarms.clear(LOCK_ALARM_NAME)
 
   // Check if vault is unlocked before setting timer
   const { isLocked, isAuthenticated } = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
@@ -50,8 +49,17 @@ async function resetLockTimer() {
   const { autoLockTimeout = DEFAULT_LOCK_TIMEOUT } = await browser.storage.local.get(['autoLockTimeout'])
   if (autoLockTimeout <= 0) return // Disabled if 0 or negative
 
-  lockTimeout = setTimeout(lockVault, autoLockTimeout)
+  // Convert milliseconds to minutes for alarms API (minimum 0.5 minutes = 30 seconds in dev mode)
+  const delayInMinutes = Math.max(autoLockTimeout / 60000, 0.5)
+  await chrome.alarms.create(LOCK_ALARM_NAME, { delayInMinutes })
 }
+
+// Listen for alarm to trigger lock
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === LOCK_ALARM_NAME) {
+    lockVault()
+  }
+})
 
 function clearAllCaches() {
   secretsCache.clear()
@@ -151,10 +159,7 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
   if (changes.isLocked?.newValue === true) {
     clearAllCaches()
-    if (lockTimeout) {
-      clearTimeout(lockTimeout)
-      lockTimeout = null
-    }
+    chrome.alarms.clear(LOCK_ALARM_NAME)
   }
   // Reset timer when vault is unlocked
   if (changes.isLocked?.newValue === false) {
