@@ -14,7 +14,8 @@ import {
   getPosition,
   getSessionVault,
   clearSessionPassword,
-  clearSessionVault
+  clearSessionVault,
+  hasSessionPassword
 } from './common'
 
 let openPrompt = null
@@ -221,31 +222,33 @@ async function handleContentScriptMessage({type, params, host}) {
     // acquire mutex here before reading policies
     releasePromptMutex = await promptMutex.acquire()
 
+    // Check if vault is locked - if so, we must show prompt for unlock
+    const isVaultLocked = !(await hasSessionPassword())
+
     let allowed = await getPermissionStatus(
       host,
       type,
       type === 'signEvent' ? params.event : undefined
     )
 
-    if (allowed === true) {
-      // authorized, proceed
-      releasePromptMutex()
-      showNotification(host, allowed, type, params)
-    } else if (allowed === false) {
+    // If vault is locked, always show prompt for unlock (even if permission granted)
+    const needsPrompt = isVaultLocked || allowed === undefined
+
+    if (allowed === false) {
       // denied, just refuse immediately
       releasePromptMutex()
       showNotification(host, allowed, type, params)
       return {
         error: {message: 'denied'}
       }
-    } else {
-      // ask for authorization
+    } else if (needsPrompt) {
+      // vault locked OR permission not yet granted - show prompt
       try {
         const array = new Uint32Array(2)
         crypto.getRandomValues(array)
         let id = Array.from(array, x => x.toString(16)).join('')
 
-        // Get current account to show in prompt
+        // Get current account to show in prompt (will be null if locked)
         const currentAccount = await getCurrentAccount()
         const currentPubkey = currentAccount ? getPublicKey(currentAccount) : null
 
@@ -254,7 +257,9 @@ async function handleContentScriptMessage({type, params, host}) {
           id,
           params: JSON.stringify(params),
           type,
-          pubkey: currentPubkey || ''
+          pubkey: currentPubkey || '',
+          // If permission already granted, just need unlock (no permission UI needed)
+          unlockOnly: allowed === true ? 'true' : ''
         })
         // center prompt
         const {top, left} = await getPosition(width, height)
@@ -278,9 +283,13 @@ async function handleContentScriptMessage({type, params, host}) {
         // errored, stop here
         releasePromptMutex()
         return {
-          error: {message: error.message, stack: error.stack}
+          error: {message: err.message, stack: err.stack}
         }
       }
+    } else {
+      // authorized and unlocked, proceed without prompt
+      releasePromptMutex()
+      showNotification(host, allowed, type, params)
     }
   }
 

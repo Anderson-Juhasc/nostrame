@@ -31,24 +31,28 @@ const HomePage = () => {
   return (
     <>
       <div className="Popup">
-        <div className="container">
-          <h1 style={{ textAlign: 'center' }}><small>Welcome to <br /></small>Nostrame</h1>
-          
-          <Link to="/signin" className="btn">
-            <i className="icon-folder-download"></i>
-            <br />
-            Import existing Vault
-            <br />
-            <small>Already have a Vault? Import it using your seed phrase or encrypted keystore file</small>
-          </Link>
-          <br />
-          <Link to="/signup" className='btn'>
-            <i className="icon-folder-plus"></i>
-            <br />
-            Create new Vault
-            <br />
-            <small>New to Nostrame Vault? Let's set it up! This will create a new vault and seed phrase</small>
-          </Link>
+        <div className="container welcome-container">
+          <div className="welcome-header">
+            <div className="welcome-logo">
+              <i className="icon-key"></i>
+            </div>
+            <h1 className="welcome-title">Nostrame</h1>
+            <p className="welcome-subtitle">Your secure Nostr key manager</p>
+          </div>
+
+          <div className="welcome-actions">
+            <Link to="/signin" className="btn">
+              <i className="icon-folder-download"></i>
+              <strong>Import existing Vault</strong>
+              <small>Already have a Vault? Import it using your seed phrase or encrypted keystore file</small>
+            </Link>
+
+            <Link to="/signup" className="btn">
+              <i className="icon-folder-plus"></i>
+              <strong>Create new Vault</strong>
+              <small>New to Nostrame? Let's set it up! This will create a new vault and seed phrase</small>
+            </Link>
+          </div>
         </div>
       </div>
     </>
