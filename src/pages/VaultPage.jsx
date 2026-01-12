@@ -2,7 +2,6 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext, useCallback, useRef } from 'react'
 import { toast } from 'react-toastify'
 import hideStringMiddle from '../helpers/hideStringMiddle'
-import copyToClipboard from '../helpers/copyToClipboard'
 import EditAccountModal from '../modals/EditAccountModal'
 import AccountDetailsModal from '../modals/AccountDetailsModal'
 import ConfirmModal from '../modals/ConfirmModal'
@@ -25,6 +24,12 @@ const VaultPage = () => {
   const copyDropdownRef = useRef(null)
 
   const INITIAL_HOSTS_LIMIT = 3
+
+  const copyToClipboard = (e, text) => {
+    e.preventDefault()
+    navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard')
+  }
 
   useEffect(() => {
     const handleClickOutside = (e) => {

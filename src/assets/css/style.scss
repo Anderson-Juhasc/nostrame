@@ -2023,26 +2023,6 @@ hr {
   to { transform: rotate(360deg); }
 }
 
-.generator__warning {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  background: rgba(234, 179, 8, 0.1);
-  border: 1px solid rgba(234, 179, 8, 0.3);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  font-size: 12px;
-  color: #fbbf24;
-  line-height: 1.4;
-
-  i {
-    font-size: 14px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-}
-
 .generator__format-toggle {
   display: flex;
   background: var(--color-bg-card);

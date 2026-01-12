@@ -119,11 +119,6 @@ const GeneratorPage = () => {
               </button>
             </div>
 
-            {/*}<div className="generator__warning">
-              <i className="icon-warning"></i>
-              <span>Back up your mnemonic phrase securely. It cannot be recovered if lost.</span>
-            </div>*/}
-
             <div className="generator__format-toggle">
               <button
                 type="button"

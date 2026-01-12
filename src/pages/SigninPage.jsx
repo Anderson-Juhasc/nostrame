@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
-import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
+import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { encrypt, setSessionPassword, setSessionVault } from '../common'
