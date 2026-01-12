@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill'
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 
 const Navbar = () => {
   const openOptionsButton = async () => {
@@ -15,16 +15,16 @@ const Navbar = () => {
     <div className="foot">
         <ul className="foot-nav">
             <li>
-            <Link to="/vault">
+            <NavLink to="/vault" className={({ isActive }) => isActive ? 'active' : ''}>
                 <i className="icon-user"></i>
                 Profile
-            </Link>
+            </NavLink>
             </li>
             <li>
-            <Link to="/generator">
+            <NavLink to="/generator" className={({ isActive }) => isActive ? 'active' : ''}>
                 <i className="icon-loop2"></i>
                 Generator
-            </Link>
+            </NavLink>
             </li>
             <li>
             <a href="#" onClick={(e) => { e.preventDefault(); openOptionsButton() }} title="Options">
