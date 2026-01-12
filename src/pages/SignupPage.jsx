@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
-import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
+import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { Link, Navigate } from 'react-router-dom'
 import { encrypt, setSessionPassword, setSessionVault } from '../common'
@@ -50,6 +50,11 @@ const Signup = () => {
 
     if (password.length < 8) {
       toast.error('Password must be at least 8 characters')
+      return
+    }
+
+    if (!validateWords(vault.mnemonic)) {
+      toast.error('Invalid mnemonic')
       return
     }
 
