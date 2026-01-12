@@ -1,14 +1,13 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
+import { toast } from 'react-toastify'
 import { decrypt, setSessionPassword, setSessionVault } from '../common'
 
 const LockedVault = ({ fetchData }) => {
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
 
   const unlockVault = async (e) => {
     e.preventDefault()
-    setError('')
 
     try {
       const storage = await browser.storage.local.get(['encryptedVault'])
@@ -19,9 +18,10 @@ const LockedVault = ({ fetchData }) => {
       await browser.storage.local.set({ isLocked: false })
 
       setPassword('')
+      toast.success('Vault unlocked')
       if (fetchData) fetchData()
     } catch (err) {
-      setError('Invalid password')
+      toast.error('Invalid password')
       setPassword('')
     }
   }
@@ -46,7 +46,6 @@ const LockedVault = ({ fetchData }) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          {error && <div style={{ color: 'red', marginTop: '8px' }}>{error}</div>}
           <br />
           <button type="submit" className="btn">
             <i className="icon-unlocked"></i>

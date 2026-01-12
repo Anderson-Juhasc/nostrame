@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
+import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
@@ -16,7 +17,6 @@ const Signup = () => {
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [passwordError, setPasswordError] = useState('')
   const [vault, setVault] = useState({
     mnemonic: '',
     passphrase: '',
@@ -42,47 +42,51 @@ const Signup = () => {
 
   async function saveAccount(e) {
     e.preventDefault()
-    setPasswordError('')
 
     if (password !== confirmPassword) {
-      setPasswordError('Passwords do not match')
+      toast.error('Passwords do not match')
       return
     }
 
     if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters')
+      toast.error('Password must be at least 8 characters')
       return
     }
 
-    const vaultData = {
-      mnemonic: vault.mnemonic,
-      passphrase: vault.passphrase,
-      accountIndex: 0,
-      accounts: [],
-      importedAccounts: [],
+    try {
+      const vaultData = {
+        mnemonic: vault.mnemonic,
+        passphrase: vault.passphrase,
+        accountIndex: 0,
+        accounts: [],
+        importedAccounts: [],
+      }
+
+      const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex))
+      vaultData.accounts.push({
+        prvKey,
+      })
+
+      vaultData.accountDefault = prvKey
+
+      const encryptedVault = encrypt(vaultData, password)
+
+      await setSessionPassword(password)
+      await setSessionVault(vaultData)
+
+      await browser.storage.local.set({
+        encryptedVault,
+        isAuthenticated: true,
+      })
+
+      await login()
+      await updateAccounts()
+      toast.success('Vault created successfully')
+
+      return navigate('/vault')
+    } catch (err) {
+      toast.error('Failed to create vault')
     }
-
-    const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex))
-    vaultData.accounts.push({
-      prvKey,
-    })
-
-    vaultData.accountDefault = prvKey
-
-    const encryptedVault = encrypt(vaultData, password)
-
-    await setSessionPassword(password)
-    await setSessionVault(vaultData)
-
-    await browser.storage.local.set({
-      encryptedVault,
-      isAuthenticated: true,
-    })
-
-    await login()
-    await updateAccounts()
-
-    return navigate('/vault')
   }
 
   const handleGenerateSeedWords = () => {
@@ -141,11 +145,6 @@ const Signup = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
-            {passwordError && (
-              <div style={{ color: '#e74c3c', marginTop: '8px', fontSize: '14px' }}>
-                {passwordError}
-              </div>
-            )}
             <br />
             <button type="submit" className="btn">Save</button>
             <br />

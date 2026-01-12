@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify'
 import * as nip19 from 'nostr-tools/nip19'
 import * as nip49 from 'nostr-tools/nip49'
+import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { encrypt, getSessionPassword, getSessionVault, setSessionVault } from '../common'
 import Modal from './Modal'
@@ -17,7 +18,9 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
   const [showModal, setShowModal] = useState(isOpen)
   const [prvKey, setPrvKey] = useState('')
   const [ncryptsecPassword, setNcryptsecPassword] = useState('')
+  const [passphrase, setPassphrase] = useState('')
   const [isNcryptsec, setIsNcryptsec] = useState(false)
+  const [isMnemonic, setIsMnemonic] = useState(false)
 
   useEffect(() => {
     setShowModal(isOpen)
@@ -27,14 +30,22 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
     setShowModal(false)
     setPrvKey('')
     setNcryptsecPassword('')
+    setPassphrase('')
     setIsNcryptsec(false)
+    setIsMnemonic(false)
     onClose()
+  }
+
+  const isMnemonicPhrase = (value) => {
+    const words = value.trim().split(/\s+/)
+    return words.length >= 12 && words.length <= 24 && words.every(word => /^[a-z]+$/.test(word))
   }
 
   const handlePrvKeyChange = (e) => {
     const value = e.target.value
     setPrvKey(value)
     setIsNcryptsec(/^ncryptsec/.test(value))
+    setIsMnemonic(isMnemonicPhrase(value))
   }
 
   const importAccount = async (e) => {
@@ -74,6 +85,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         await setSessionVault(vault)
         await updateAccounts()
 
+        toast.success('Account imported successfully')
         callBack()
         navigate('/vault')
       } catch (err) {
@@ -100,6 +112,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           await setSessionVault(vault)
           await updateAccounts()
 
+          toast.success('Account imported successfully')
           callBack()
 
           navigate('/vault')
@@ -108,10 +121,42 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         toast.error('Invalid private key format')
         setPrvKey('')
       }
+    } else if (isMnemonicPhrase(prvKey)) {
+      try {
+        const prvKeyBytes = privateKeyFromSeedWords(prvKey.trim(), passphrase)
+        const prvKeyHex = bytesToHex(prvKeyBytes)
+
+        const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
+        const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
+        if (prvKeyExist || prvKeyExistInDerived) {
+          toast.error('This private key already exists')
+          setPrvKey('')
+          setPassphrase('')
+          setIsMnemonic(false)
+          return false
+        }
+
+        vault.importedAccounts.push({ prvKey: prvKeyHex })
+        vault.accountDefault = prvKeyHex
+        const encryptedVault = encrypt(vault, password)
+        await browser.storage.local.set({ encryptedVault })
+        await setSessionVault(vault)
+        await updateAccounts()
+
+        toast.success('Account imported successfully')
+        callBack()
+
+        navigate('/vault')
+      } catch (e) {
+        toast.error('Invalid mnemonic phrase')
+        setPrvKey('')
+        setPassphrase('')
+        setIsMnemonic(false)
+      }
     } else if (/^[0-9a-fA-F]+$/.test(prvKey)) {
       try {
         let prvKeyBytes = hexToBytes(prvKey)
-        let prvKeyHex = bytesToHex(prvKeyBytes) 
+        let prvKeyHex = bytesToHex(prvKeyBytes)
 
         const prvKeyExist = vault.importedAccounts.find(obj => obj['prvKey'] === prvKeyHex)
         const prvKeyExistInDerived = vault.accounts.find(obj => obj['prvKey'] === prvKeyHex)
@@ -128,6 +173,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         await setSessionVault(vault)
         await updateAccounts()
 
+        toast.success('Account imported successfully')
         callBack()
 
         navigate('/vault')
@@ -135,6 +181,8 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         toast.error('Invalid private key format')
         setPrvKey('')
       }
+    } else {
+      toast.error('Invalid format. Use nsec, ncryptsec, hex, or mnemonic phrase.')
     }
 
     setPrvKey('')
@@ -146,10 +194,10 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         <form onSubmit={importAccount}>
           <label>Import account</label>
           <br />
-          <input
-            type="text"
+          <textarea
+            rows="2"
             autoComplete="off"
-            placeholder="nsec, ncryptsec or hex"
+            placeholder="nsec, ncryptsec, hex, or mnemonic phrase"
             name="prvKey"
             required
             value={prvKey}
@@ -165,6 +213,18 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
                 value={ncryptsecPassword}
                 onChange={(e) => setNcryptsecPassword(e.target.value)}
                 required
+              />
+            </>
+          )}
+          {isMnemonic && (
+            <>
+              <br />
+              <input
+                type="password"
+                autoComplete="off"
+                placeholder="Passphrase (optional)"
+                value={passphrase}
+                onChange={(e) => setPassphrase(e.target.value)}
               />
             </>
           )}

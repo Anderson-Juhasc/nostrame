@@ -34,7 +34,7 @@ const HomePage = () => {
         <div className="container welcome-container">
           <div className="welcome-header">
             <div className="welcome-logo">
-              <i className="icon-key"></i>
+              <img src="assets/icons/logo.svg" alt="Nostrame" />
             </div>
             <h1 className="welcome-title">Nostrame</h1>
             <p className="welcome-subtitle">Your secure Nostr key manager</p>

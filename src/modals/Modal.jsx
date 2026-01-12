@@ -16,8 +16,8 @@ const Modal = ({ id, isOpen, onClose, children }) => {
     <>
       {isActive && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal">
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
               <button className="close" onClick={closeModal}>&times;</button>
               {children}
             </div>

@@ -21,12 +21,14 @@ const Relays = () => {
 
     await setRelays([...relays, relay])
     setRelay('')
+    toast.success('Relay added')
   }
 
   const removeRelay = async (index) => {
     const newRelays = [...relays]
     newRelays.splice(index, 1)
     await setRelays(newRelays)
+    toast.success('Relay removed')
   }
 
   if (loading) {

@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
+import { toast } from 'react-toastify'
 import { finalizeEvent } from 'nostr-tools/pure'
 import Modal from './Modal'
 import { pool, DEFAULT_RELAYS } from '../common'
@@ -54,7 +55,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
         created_at: Math.floor(Date.now() / 1000),
         tags: [],
         content: JSON.stringify({
-          name: account.name, 
+          name: account.name,
           display_name: account.name,
           about: account.about,
           picture: account.picture,
@@ -66,10 +67,11 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
 
       const signedEvent = finalizeEvent(event, accountData.prvKey)
       await Promise.any(pool.publish(relays, signedEvent))
-      
+
+      toast.success('Profile updated successfully')
       callBack()
     } catch (error) {
-      console.error('Failed to update profile:', error)
+      toast.error('Failed to update profile')
     }
   }
 

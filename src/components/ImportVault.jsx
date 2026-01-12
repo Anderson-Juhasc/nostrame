@@ -41,6 +41,7 @@ const ImportVault = ({ fetchData }) => {
             isLocked: false,
           })
           setPassword('')
+          toast.success('Vault imported successfully')
           fetchData()
         } catch (e) {
           toast.error('Invalid vault file or wrong password')

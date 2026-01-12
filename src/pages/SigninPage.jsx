@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
+import { toast } from 'react-toastify'
 import { privateKeyFromSeedWords, generateSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex } from 'nostr-tools/utils'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
@@ -48,34 +49,39 @@ const Signin = () => {
   async function saveAccount(e) {
     e.preventDefault()
 
-    const vaultData = {
-      mnemonic: vault.mnemonic,
-      passphrase: vault.passphrase,
-      accountIndex: 0,
-      accounts: [],
-      importedAccounts: [],
+    try {
+      const vaultData = {
+        mnemonic: vault.mnemonic,
+        passphrase: vault.passphrase,
+        accountIndex: 0,
+        accounts: [],
+        importedAccounts: [],
+      }
+
+      const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex))
+      vaultData.accounts.push({
+        prvKey,
+      })
+
+      vaultData.accountDefault = prvKey
+
+      const encryptedVault = encrypt(vaultData, password)
+
+      await setSessionPassword(password)
+      await setSessionVault(vaultData)
+
+      await browser.storage.local.set({
+        encryptedVault,
+        isAuthenticated: true,
+      })
+
+      await login()
+      toast.success('Vault imported successfully')
+
+      return navigate('/vault')
+    } catch (err) {
+      toast.error('Invalid mnemonic or failed to import vault')
     }
-
-    const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vaultData.accountIndex))
-    vaultData.accounts.push({
-      prvKey,
-    })
-
-    vaultData.accountDefault = prvKey
-
-    const encryptedVault = encrypt(vaultData, password)
-
-    await setSessionPassword(password)
-    await setSessionVault(vaultData)
-
-    await browser.storage.local.set({
-      encryptedVault,
-      isAuthenticated: true,
-    })
-
-    await login()
-
-    return navigate('/vault')
   }
 
   const openOptionsButton = async () => {

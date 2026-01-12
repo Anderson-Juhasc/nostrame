@@ -48,6 +48,7 @@ const GenerateRandomAccountModal = ({ isOpen, onClose, callBack }) => {
     await browser.storage.local.set({ encryptedVault })
     await setSessionVault(vault)
 
+    toast.success('Account imported successfully')
     callBack()
     closeModal()
   }
@@ -65,6 +66,7 @@ const GenerateRandomAccountModal = ({ isOpen, onClose, callBack }) => {
   const copyToClipboard = (e, text) => {
     e.preventDefault()
     navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard')
   }
 
   return (

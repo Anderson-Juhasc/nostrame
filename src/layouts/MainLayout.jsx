@@ -54,7 +54,15 @@ const MainLayout = () => {
               <Navbar />
             )}
           </MainProvider>
-          <ToastContainer />
+          <ToastContainer
+            position="bottom-center"
+            autoClose={3000}
+            hideProgressBar
+            newestOnTop={false}
+            closeOnClick
+            pauseOnHover
+            theme="dark"
+          />
         </>
       )}
     </>

@@ -139,6 +139,7 @@ const Accounts = () => {
                           <strong className="account-dropdown__name">
                             {displayName}
                           </strong>
+                          {account.type === "derived" && <small className="account-dropdown__tag">Derived</small>}
                           {account.type === "imported" && <small className="account-dropdown__tag">Imported</small>}
                         </div>
                         <div className="account-dropdown__npub">
@@ -153,8 +154,8 @@ const Accounts = () => {
 
             <ul className="account-dropdown-nav">
               <li>
-                <a href="#" onClick={(e) => { e.preventDefault(); setShowDeriveAccount(true); setIsDropdownOpen(false) }} title="Create account">
-                  <i className="icon-user-plus"></i> Create account
+                <a href="#" onClick={(e) => { e.preventDefault(); setShowDeriveAccount(true); setIsDropdownOpen(false) }} title="Derive account">
+                  <i className="icon-user-plus"></i> Derive account
                 </a>
               </li>
               <li>

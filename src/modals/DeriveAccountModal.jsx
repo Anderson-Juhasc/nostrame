@@ -64,6 +64,7 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     await updateAccounts()
 
     setName('')
+    toast.success('Account created successfully')
     callBack()
   }
 
@@ -71,8 +72,10 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     <div>
       <Modal isOpen={showModal} onClose={onClose}>
         <form onSubmit={addAccount}>
-          <label>Add account</label>
-          <br />
+          <label>Derive account</label>
+          <p className="modal-info">
+            This account will be derived from your vault's mnemonic seed phrase using the next available index.
+          </p>
           <input
             type="text"
             autoComplete="off"

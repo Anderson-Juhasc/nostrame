@@ -5,10 +5,12 @@ import { useStorage } from '../hooks/useStorage'
 const HeaderVault = () => {
   const [isAuthenticated] = useStorage('isAuthenticated', false)
 
+  if (!isAuthenticated) return null
+
   return (
-    <div className={isAuthenticated ? "header" :  "header header__brand"}>
+    <div className="header">
       <img src="assets/icons/logo.svg" alt="Nostrame" title="Nostrame" className="header__logo" />
-      {isAuthenticated && <Accounts />}
+      <Accounts />
     </div>
   )
 }

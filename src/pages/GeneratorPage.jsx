@@ -62,6 +62,7 @@ const GeneratorPage = () => {
     await setSessionVault(vault)
     await updateAccounts()
 
+    toast.success('Account imported successfully')
     navigate('/vault')
   }
 
@@ -73,52 +74,67 @@ const GeneratorPage = () => {
   const copyToClipboard = (e, text) => {
     e.preventDefault()
     navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard')
   }
 
   return (
     <div className="Popup">
-      <div className="container">
+      <div className="container" style={{ paddingBottom: '96px' }}>
         <>
           {loaded ? (
             <>
               <h2>Generate Account</h2>
 
-              <p className="break-string">
-                <strong>Mnemonic:</strong>
-                &nbsp;
-                <br />
-                {account.mnemonic}
-                &nbsp;
-                <a href="#" onClick={(e) => copyToClipboard(e, account.mnemonic)} title="Copy">
-                  <i className="icon-copy"></i>
-                </a>
-              </p>
-              <p className="break-string">
-                <strong>{format === 'bech32' ? 'Nsec' : `Private Key`}:</strong>
-                &nbsp;
-                <a href="#" onClick={(e) => convertFormat(e)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
-                  <i className="icon-tab"></i>
-                </a>
-                <br />
-                {format === 'bech32' ? account.nsec : account.prvKey}
-                &nbsp;
-                <a href="#" onClick={(e) => copyToClipboard(e, format === 'bech32' ? account.nsec : account.prvKey)} title="Copy">
-                  <i className="icon-copy"></i>
-                </a>
-              </p>
-              <p className="break-string">
-                <strong>{format === 'bech32' ? 'Npub' : 'Public Key'}:</strong>
-                &nbsp;
-                <a href="#" onClick={(e) => convertFormat(e)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
-                  <i className="icon-tab"></i>
-                </a>
-                <br />
-                {format === 'bech32' ? account.npub : account.pubKey}
-                &nbsp;
-                <a href="#" onClick={(e) => copyToClipboard(e, format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
-                  <i className="icon-copy"></i>
-                </a>
-              </p>
+              <div className="form-group">
+                <label>
+                  Mnemonic
+                  <a href="#" onClick={(e) => copyToClipboard(e, account.mnemonic)} title="Copy">
+                    <i className="icon-copy"></i>
+                  </a>
+                </label>
+                <textarea
+                  readOnly
+                  rows="2"
+                  value={account.mnemonic || ''}
+                  onClick={(e) => e.target.select()}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>
+                  {format === 'bech32' ? 'Nsec' : 'Private Key'}
+                  <a href="#" onClick={(e) => convertFormat(e)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+                    <i className="icon-tab"></i>
+                  </a>
+                  <a href="#" onClick={(e) => copyToClipboard(e, format === 'bech32' ? account.nsec : account.prvKey)} title="Copy">
+                    <i className="icon-copy"></i>
+                  </a>
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={format === 'bech32' ? account.nsec : account.prvKey}
+                  onClick={(e) => e.target.select()}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>
+                  {format === 'bech32' ? 'Npub' : 'Public Key'}
+                  <a href="#" onClick={(e) => convertFormat(e)} title={format === 'bech32' ? 'Convert to hex' : 'Convert to bech32'}>
+                    <i className="icon-tab"></i>
+                  </a>
+                  <a href="#" onClick={(e) => copyToClipboard(e, format === 'bech32' ? account.npub : account.pubKey)} title="Copy">
+                    <i className="icon-copy"></i>
+                  </a>
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={format === 'bech32' ? account.npub : account.pubKey}
+                  onClick={(e) => e.target.select()}
+                />
+              </div>
 
               <button type="button" className="btn" onClick={generateRandomAccount}>Generate new</button>
               <br />

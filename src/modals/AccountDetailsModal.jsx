@@ -41,6 +41,7 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
       const prvKeyBytes = hexToBytes(account.prvKey)
       const encrypted = await nip49.encrypt(prvKeyBytes, ncryptsecPassword)
       setNcryptsec(encrypted)
+      toast.success('Encrypted key generated')
     } catch (err) {
       toast.error('Error generating ncryptsec')
     }
@@ -49,6 +50,7 @@ const AccountDetailsModal = ({ isOpen, onClose, accountData }) => {
   const copyToClipboard = (e, text) => {
     e.preventDefault()
     navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard')
   }
 
   async function convertFormat(e) {
