@@ -12,6 +12,9 @@ import ExportVault from './components/ExportVault'
 import Secrets from './components/Secrets'
 import { decrypt, setSessionPassword, setSessionVault } from './common'
 
+// Connect to background to pause lock timer while options page is open
+browser.runtime.connect({ name: 'ui-active' })
+
 function Options() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLocked, setIsLocked] = useState(false)

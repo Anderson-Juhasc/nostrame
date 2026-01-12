@@ -28,6 +28,9 @@ let lastUsedAccount = null
 const DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000
 const LOCK_ALARM_NAME = 'autoLockAlarm'
 
+// Track active UI connections (popup/options pages)
+let activeConnections = new Set()
+
 async function lockVault() {
   const { isAuthenticated } = await browser.storage.local.get(['isAuthenticated'])
   if (!isAuthenticated) return // Don't lock if not authenticated
@@ -42,6 +45,9 @@ async function resetLockTimer() {
   // Clear any existing alarm
   await chrome.alarms.clear(LOCK_ALARM_NAME)
 
+  // Don't start timer if UI is actively open (popup or options page)
+  if (activeConnections.size > 0) return
+
   // Check if vault is unlocked before setting timer
   const { isLocked, isAuthenticated } = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
   if (!isAuthenticated || isLocked) return
@@ -54,6 +60,23 @@ async function resetLockTimer() {
   const delayInMinutes = Math.max(autoLockTimeout / 60000, 0.5)
   await chrome.alarms.create(LOCK_ALARM_NAME, { delayInMinutes })
 }
+
+// Handle UI connections (popup/options) - pause timer while connected
+browser.runtime.onConnect.addListener((port) => {
+  if (port.name === 'ui-active') {
+    activeConnections.add(port)
+    // Pause the timer while UI is open
+    chrome.alarms.clear(LOCK_ALARM_NAME)
+
+    port.onDisconnect.addListener(() => {
+      activeConnections.delete(port)
+      // Resume timer when all UI connections are closed
+      if (activeConnections.size === 0) {
+        resetLockTimer()
+      }
+    })
+  }
+})
 
 // Listen for alarm to trigger lock
 chrome.alarms.onAlarm.addListener((alarm) => {

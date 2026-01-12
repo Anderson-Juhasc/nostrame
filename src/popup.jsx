@@ -1,4 +1,5 @@
 import React from 'react'
+import browser from 'webextension-polyfill'
 import { HashRouter as Router, Route, Routes } from 'react-router-dom'
 import { createRoot } from 'react-dom/client'
 import { AuthProvider } from './middlewares/AuthContext'
@@ -11,6 +12,9 @@ import SignupPage from './pages/SignupPage'
 import VaultPage from './pages/VaultPage'
 import NotFoundPage from './pages/NotFoundPage'
 import GeneratorPage from './pages/GeneratorPage'
+
+// Connect to background to pause lock timer while popup is open
+browser.runtime.connect({ name: 'ui-active' })
 
 const App = () => {
   return (
