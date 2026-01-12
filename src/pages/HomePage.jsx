@@ -3,10 +3,12 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import React, { useEffect, useContext } from 'react'
 import { useAuth } from '../middlewares/AuthContext';
 import MainContext from '../contexts/MainContext'
+import Loading from '../components/Loading'
 
 const HomePage = () => {
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, isLoading, login } = useAuth()
 
+  if (isLoading) return <Loading />
   if (isAuthenticated) return <Navigate to="/vault" />
 
   const { updateAccounts } = useContext(MainContext)

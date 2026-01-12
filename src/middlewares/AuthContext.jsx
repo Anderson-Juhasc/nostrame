@@ -5,10 +5,12 @@ const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     const storage = await browser.storage.local.get('isAuthenticated')
     setIsAuthenticated(storage.isAuthenticated === true)
+    setIsLoading(false)
   }, [])
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

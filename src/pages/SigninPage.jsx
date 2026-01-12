@@ -5,10 +5,13 @@ import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr
 import { bytesToHex } from 'nostr-tools/utils'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { encrypt, setSessionPassword, setSessionVault } from '../common'
-import { useAuth } from '../middlewares/AuthContext';
+import { useAuth } from '../middlewares/AuthContext'
+import Loading from '../components/Loading'
 
 const Signin = () => {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) return <Loading />
   if (isAuthenticated) return <Navigate to="/vault" />
 
   const [password, setPassword] = useState('')
