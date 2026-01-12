@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify'
 import * as nip19 from 'nostr-tools/nip19'
 import * as nip49 from 'nostr-tools/nip49'
-import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
+import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { encrypt, getSessionPassword, getSessionVault, setSessionVault } from '../common'
 import Modal from './Modal'
@@ -36,16 +36,11 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
     onClose()
   }
 
-  const isMnemonicPhrase = (value) => {
-    const words = value.trim().split(/\s+/)
-    return words.length >= 12 && words.length <= 24 && words.every(word => /^[a-z]+$/.test(word))
-  }
-
   const handlePrvKeyChange = (e) => {
     const value = e.target.value
     setPrvKey(value)
     setIsNcryptsec(/^ncryptsec/.test(value))
-    setIsMnemonic(isMnemonicPhrase(value))
+    setIsMnemonic(validateWords(value))
   }
 
   const importAccount = async (e) => {
@@ -121,7 +116,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         toast.error('Invalid private key format')
         setPrvKey('')
       }
-    } else if (isMnemonicPhrase(prvKey)) {
+    } else if (validateWords(prvKey)) {
       try {
         const prvKeyBytes = privateKeyFromSeedWords(prvKey.trim(), passphrase)
         const prvKeyHex = bytesToHex(prvKeyBytes)
