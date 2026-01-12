@@ -42,29 +42,25 @@ const MainLayout = () => {
   return (
     <>
       {isLocked ? (
-        <>
-          <LockedVault fetchData={fetchData} />
-        </>
+        <LockedVault fetchData={fetchData} />
       ) : (
-        <>
-          <MainProvider>
-            <HeaderVault />
-            <Outlet />
-            {isAuthenticated && (
-              <Navbar />
-            )}
-          </MainProvider>
-          <ToastContainer
-            position="bottom-center"
-            autoClose={3000}
-            hideProgressBar
-            newestOnTop={false}
-            closeOnClick
-            pauseOnHover
-            theme="dark"
-          />
-        </>
+        <MainProvider>
+          <HeaderVault />
+          <Outlet />
+          {isAuthenticated && (
+            <Navbar />
+          )}
+        </MainProvider>
       )}
+      <ToastContainer
+        position="bottom-center"
+        autoClose={3000}
+        hideProgressBar
+        newestOnTop={false}
+        closeOnClick
+        pauseOnHover
+        theme="dark"
+      />
     </>
   )
 }
