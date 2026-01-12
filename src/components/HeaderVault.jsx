@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import Accounts from '../components/Accounts'
 import { useStorage } from '../hooks/useStorage'
 
@@ -9,7 +10,9 @@ const HeaderVault = () => {
 
   return (
     <div className="header">
-      <img src="assets/icons/logo.svg" alt="Nostrame" title="Nostrame" className="header__logo" />
+      <Link to="/vault">
+        <img src="assets/icons/logo.svg" alt="Nostrame" title="Nostrame" className="header__logo" />
+      </Link>
       <Accounts />
     </div>
   )
