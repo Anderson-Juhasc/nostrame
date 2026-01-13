@@ -336,38 +336,6 @@ export async function getWriteRelaysBatch(pubkeys, forceRefresh = false) {
 }
 
 /**
- * Get read relays for a pubkey (from cache or fetch)
- *
- * IMPORTANT: READ RELAYS ARE NOT USED FOR FETCHING PROFILES
- *
- * A user's read relays are where THEY subscribe to content from others.
- * This is the "inbox" side of the model.
- *
- * When using the outbox model to fetch User A's profile:
- * - You query User A's WRITE relays (where they publish)
- * - You do NOT query User A's read relays
- *
- * This function exists for:
- * - Completeness
- * - Future inbox-model publishing support
- * - Displaying the user's relay configuration
- *
- * @param {string} pubkey - The user whose read relays you want
- * @param {boolean} forceRefresh - Force fresh fetch, ignoring cache
- * @returns {Promise<string[]>} - Array of validated read relay URLs
- */
-export async function getReadRelays(pubkey, forceRefresh = false) {
-  const { relays } = await fetchRelayList(pubkey, forceRefresh)
-
-  // Filter strictly: must have read === true and valid URL
-  const readRelays = relays
-    .filter(r => r.read === true && isValidRelayUrl(r.url))
-    .map(r => r.url)
-
-  return readRelays.length > 0 ? readRelays : DEFAULT_RELAYS
-}
-
-/**
  * Parse a kind 10002 event into a relay list
  * Validates URLs and handles malformed data defensively
  * @param {object} event - The kind 10002 event
