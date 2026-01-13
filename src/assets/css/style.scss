@@ -2261,6 +2261,37 @@ hr {
   margin: 0;
 }
 
+.relays-page__warning {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+
+  > i {
+    color: #fbbf24;
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  strong {
+    display: block;
+    color: #fbbf24;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 0;
+    line-height: 1.4;
+  }
+}
+
 .relays-page__form {
   display: flex;
   gap: 8px;

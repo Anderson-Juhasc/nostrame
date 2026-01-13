@@ -22,6 +22,7 @@ const RelaysPage = () => {
   const [refreshingRelays, setRefreshingRelays] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [usingDefaults, setUsingDefaults] = useState(false)
 
   // Track previous pubkey to detect account switch
   const prevPubKeyRef = useRef(null)
@@ -55,6 +56,7 @@ const RelaysPage = () => {
 
       if (fetchedRelays.length > 0) {
         setRelays(fetchedRelays)
+        setUsingDefaults(false)
         // Don't mark as having changes just because we loaded from cache
         if (!forceRefresh) {
           setHasChanges(false)
@@ -62,6 +64,7 @@ const RelaysPage = () => {
       } else {
         // No relay list found, use defaults
         setRelays(getDefaultRelayList())
+        setUsingDefaults(true)
         setHasChanges(true) // Mark as needing publish
       }
 
@@ -71,6 +74,7 @@ const RelaysPage = () => {
     } catch (error) {
       console.error('Failed to load relays:', error)
       setRelays(getDefaultRelayList())
+      setUsingDefaults(true)
       setHasChanges(true)
     }
 
@@ -149,6 +153,7 @@ const RelaysPage = () => {
       await publishRelayList(signedEvent, publishTo)
 
       setHasChanges(false)
+      setUsingDefaults(false)
       toast.success('Relay list published')
     } catch (error) {
       console.error('Failed to publish:', error)
@@ -186,6 +191,16 @@ const RelaysPage = () => {
             </div>
             <p className="relays-page__subtitle">Manage your NIP-65 relay list</p>
           </div>
+
+          {usingDefaults && (
+            <div className="relays-page__warning">
+              <i className="icon-warning"></i>
+              <div>
+                <strong>Using default relays</strong>
+                <p>No relay list (kind 10002) was found for this account. Publish your relay list so other users can find your content.</p>
+              </div>
+            </div>
+          )}
 
           <form className="relays-page__form" onSubmit={addRelay}>
             <input
