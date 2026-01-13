@@ -127,8 +127,8 @@ async function getCurrentAccount() {
   return vault.accountDefault
 }
 
-const width = 340
-const height = 360
+const width = 400
+const height = 600
 
 browser.runtime.onInstalled.addListener(async (_, __, reason) => {
   if (reason === 'install') browser.runtime.openOptionsPage()

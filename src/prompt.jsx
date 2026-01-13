@@ -46,6 +46,21 @@ function Prompt() {
   }, [])
 
   async function checkLockState() {
+    // Check if vault exists first
+    const { encryptedVault } = await browser.storage.local.get(['encryptedVault'])
+    if (!encryptedVault) {
+      // No vault exists, reject the request
+      browser.runtime.sendMessage({
+        prompt: true,
+        id,
+        host,
+        type,
+        accept: false,
+        conditions: null
+      })
+      return
+    }
+
     const hasPassword = await hasSessionPassword()
     setIsLocked(!hasPassword)
     setIsLoading(false)

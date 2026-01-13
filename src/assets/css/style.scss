@@ -1628,6 +1628,9 @@ hr {
 /* Prompt (Permission Request) Styles */
 .prompt {
   animation: fadeIn 0.2s ease;
+  margin: 0 auto;
+  padding: 16px 0;
+  width: 320px;
 }
 
 .prompt__header {
@@ -1843,7 +1846,7 @@ hr {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 16px 16px;
+  padding-bottom: 16px;
 }
 
 .prompt__unlock-message {
