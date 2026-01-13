@@ -133,19 +133,13 @@ const height = 360
 browser.runtime.onInstalled.addListener(async (_, __, reason) => {
   if (reason === 'install') browser.runtime.openOptionsPage()
 
-  // Set default relays and auto-lock timeout
+  // Set default auto-lock timeout
   await browser.storage.local.set({
-    "relays": [
-      "wss://relay.damus.io",
-      "wss://nos.lol",
-      "wss://nostr.bitcoiner.social",
-      "wss://offchain.pub",
-    ],
     "autoLockTimeout": DEFAULT_LOCK_TIMEOUT
   })
 
-  // Cleanup: remove unencrypted vault from local storage (security fix)
-  await browser.storage.local.remove(['vault'])
+  // Cleanup: remove unencrypted vault and legacy relays from local storage
+  await browser.storage.local.remove(['vault', 'relays'])
 })
 
 // Start lock timer on extension startup

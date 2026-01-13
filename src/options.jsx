@@ -6,7 +6,6 @@ import { ToastContainer, toast } from 'react-toastify'
 import ErrorBoundary from './components/ErrorBoundary'
 import ChangePassword from './components/ChangePassword'
 import ResetVault from './components/ResetVault'
-import Relays from './components/Relays'
 import ImportVault from './components/ImportVault'
 import ExportVault from './components/ExportVault'
 import Secrets from './components/Secrets'
@@ -63,7 +62,6 @@ function Options() {
 
   const tabs = [
     { id: 'backup', label: 'Backup', icon: 'icon-folder-download' },
-    { id: 'relays', label: 'Relays', icon: 'icon-sphere' },
     { id: 'security', label: 'Security', icon: 'icon-lock' },
   ]
 
@@ -75,7 +73,7 @@ function Options() {
             <i className="icon-cog"></i>
             Settings
           </h1>
-          <p className="options-header__subtitle">Manage your vault, relays, and security settings</p>
+          <p className="options-header__subtitle">Manage your vault and security settings</p>
         </div>
       </div>
 
@@ -102,12 +100,6 @@ function Options() {
                     <div className="options-section">
                       <ExportVault />
                       <Secrets />
-                    </div>
-                  )}
-
-                  {activeTab === 'relays' && (
-                    <div className="options-section">
-                      <Relays />
                     </div>
                   )}
 
