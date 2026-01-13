@@ -2544,6 +2544,8 @@ hr {
   }
 
   &__content {
+    margin: 0 auto;
+    width: 600px;
     position: relative;
     z-index: 1;
   }
