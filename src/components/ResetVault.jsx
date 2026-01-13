@@ -20,10 +20,29 @@ const ResetVault = ({ fetchData }) => {
   }
 
   return (
-    <>
-      <h2>Reset Vault</h2>
-
-      <button type="button" onClick={() => setShowConfirm(true)}>Reset Vault</button>
+    <div className="options-card options-card--danger">
+      <div className="options-card__header">
+        <div className="options-card__icon options-card__icon--danger">
+          <i className="icon-warning"></i>
+        </div>
+        <div className="options-card__title">
+          <h3>Reset Vault</h3>
+          <p>Permanently delete all stored data</p>
+        </div>
+      </div>
+      <div className="options-card__content">
+        <p className="options-card__description options-card__description--danger">
+          This action will permanently delete your vault and all stored accounts. Make sure you have exported a backup before proceeding.
+        </p>
+        <button
+          type="button"
+          className="options-card__btn options-card__btn--danger"
+          onClick={() => setShowConfirm(true)}
+        >
+          <i className="icon-bin"></i>
+          Reset Vault
+        </button>
+      </div>
 
       <ConfirmModal
         isOpen={showConfirm}
@@ -34,7 +53,7 @@ const ResetVault = ({ fetchData }) => {
         onConfirm={handleConfirmReset}
         onClose={() => setShowConfirm(false)}
       />
-    </>
+    </div>
   )
 }
 export default ResetVault

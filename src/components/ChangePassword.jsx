@@ -53,9 +53,9 @@ const ChangePassword = ({ fetchData }) => {
         confirmNewPassword: '',
       })
       fetchData()
-      toast.success("Your password was changed with success")
+      toast.success("Your password was changed successfully")
     } catch (e) {
-      toast.error("Your password do not match", e)
+      toast.error("Current password is incorrect")
       setChangePassword({
         currentPassword: '',
         newPassword: '',
@@ -65,41 +65,60 @@ const ChangePassword = ({ fetchData }) => {
   }
 
   return (
-    <>
-      <form onSubmit={submitChangePassword}>
-        <h2>Change Password</h2>
-        <input
-          type="password"
-          autoComplete="off"
-          placeholder="Current password"
-          name="currentPassword"
-          required
-          value={changePassword.currentPassword}
-          onChange={(e) => changePasswordInput(e)}
-        />
-        <br />
-        <input
-          type="password"
-          autoComplete="off"
-          placeholder="New password"
-          name="newPassword"
-          required
-          value={changePassword.newPassword}
-          onChange={(e) => changePasswordInput(e)}
-        />
-        <br />
-        <input
-          type="password"
-          autoComplete="off"
-          placeholder="Confirm new password"
-          name="confirmNewPassword"
-          required
-          value={changePassword.confirmNewPassword}
-          onChange={(e) => changePasswordInput(e)}
-        />
-        <br />
-        <button type="submit" className="btn">Change password</button>
-      </form>
+    <div className="options-card">
+      <div className="options-card__header">
+        <div className="options-card__icon">
+          <i className="icon-key"></i>
+        </div>
+        <div className="options-card__title">
+          <h3>Change Password</h3>
+          <p>Update your vault encryption password</p>
+        </div>
+      </div>
+      <div className="options-card__content">
+        <form onSubmit={submitChangePassword} className="password-form">
+          <div className="password-form__field">
+            <label>Current Password</label>
+            <input
+              type="password"
+              autoComplete="off"
+              placeholder="Enter current password"
+              name="currentPassword"
+              required
+              value={changePassword.currentPassword}
+              onChange={(e) => changePasswordInput(e)}
+            />
+          </div>
+          <div className="password-form__field">
+            <label>New Password</label>
+            <input
+              type="password"
+              autoComplete="off"
+              placeholder="Enter new password"
+              name="newPassword"
+              required
+              value={changePassword.newPassword}
+              onChange={(e) => changePasswordInput(e)}
+            />
+          </div>
+          <div className="password-form__field">
+            <label>Confirm New Password</label>
+            <input
+              type="password"
+              autoComplete="off"
+              placeholder="Confirm new password"
+              name="confirmNewPassword"
+              required
+              value={changePassword.confirmNewPassword}
+              onChange={(e) => changePasswordInput(e)}
+            />
+          </div>
+          <button type="submit" className="options-card__btn">
+            <i className="icon-lock"></i>
+            Change Password
+          </button>
+        </form>
+      </div>
 
       <ConfirmModal
         isOpen={showConfirm}
@@ -108,7 +127,7 @@ const ChangePassword = ({ fetchData }) => {
         onConfirm={handleConfirmChange}
         onClose={() => setShowConfirm(false)}
       />
-    </>
+    </div>
   )
 }
 export default ChangePassword

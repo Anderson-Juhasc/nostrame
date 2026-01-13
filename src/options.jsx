@@ -62,16 +62,24 @@ function Options() {
   }, [fetchData])
 
   const tabs = [
-    { id: 'backup', label: 'Backup' },
-    { id: 'relays', label: 'Relays' },
-    { id: 'security', label: 'Security' },
+    { id: 'backup', label: 'Backup', icon: 'icon-folder-download' },
+    { id: 'relays', label: 'Relays', icon: 'icon-sphere' },
+    { id: 'security', label: 'Security', icon: 'icon-lock' },
   ]
 
   return (
     <div className="Options">
-      <div className="container">
-        <h1>Options</h1>
+      <div className="options-header">
+        <div className="options-header__content">
+          <h1>
+            <i className="icon-cog"></i>
+            Settings
+          </h1>
+          <p className="options-header__subtitle">Manage your vault, relays, and security settings</p>
+        </div>
+      </div>
 
+      <div className="container">
         {!isLocked ? (
           <>
             {isAuthenticated ? (
@@ -83,6 +91,7 @@ function Options() {
                       className={`options-tabs__btn ${activeTab === tab.id ? 'active' : ''}`}
                       onClick={() => setActiveTab(tab.id)}
                     >
+                      <i className={tab.icon}></i>
                       {tab.label}
                     </button>
                   ))}
@@ -90,49 +99,59 @@ function Options() {
 
                 <div className="options-tabs__content">
                   {activeTab === 'backup' && (
-                    <>
+                    <div className="options-section">
                       <ExportVault />
-                      <hr />
                       <Secrets />
-                    </>
+                    </div>
                   )}
 
                   {activeTab === 'relays' && (
-                    <Relays />
+                    <div className="options-section">
+                      <Relays />
+                    </div>
                   )}
 
                   {activeTab === 'security' && (
-                    <>
+                    <div className="options-section">
                       <ChangePassword fetchData={fetchData} />
-                      <hr />
                       <ResetVault fetchData={fetchData} />
-                    </>
+                    </div>
                   )}
                 </div>
               </>
             ) : (
-              <ImportVault fetchData={fetchData} />
+              <div className="options-section">
+                <ImportVault fetchData={fetchData} />
+              </div>
             )}
           </>
         ) : (
-          <form onSubmit={unlockVault}>
-            <h2>Vault is locked</h2>
-            <input
-              type="password"
-              autoComplete="off"
-              placeholder="Password"
-              name="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <br />
-            <button type="submit">
-              <i className="icon-unlocked"></i>
-              &nbsp;
-              Unlock
-            </button>
-          </form>
+          <div className="options-lock">
+            <div className="options-lock__card">
+              <div className="options-lock__icon">
+                <i className="icon-lock"></i>
+              </div>
+              <h2>Vault Locked</h2>
+              <p>Enter your password to access settings</p>
+              <form onSubmit={unlockVault}>
+                <div className="options-lock__input-group">
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    placeholder="Enter password"
+                    name="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <button type="submit" className="options-lock__btn">
+                  <i className="icon-unlocked"></i>
+                  Unlock Vault
+                </button>
+              </form>
+            </div>
+          </div>
         )}
       </div>
 
