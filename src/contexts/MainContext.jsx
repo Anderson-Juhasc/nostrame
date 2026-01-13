@@ -21,6 +21,33 @@ const MainContext = createContext()
 const identiconCache = new Map()
 
 /**
+ * Defensive field length limits for profile parsing
+ * Prevents memory abuse via oversized fields (DoS protection, not content restriction)
+ */
+const PROFILE_FIELD_LIMITS = {
+  name: 100,
+  display_name: 100,
+  about: 500,
+  nip05: 100,
+  lud16: 100,
+  website: 200,
+}
+
+/**
+ * Safely extract and truncate a string field from profile content
+ * @param {object} content - Profile content object
+ * @param {string} field - Field name to extract
+ * @param {string} fallback - Fallback value if field is missing/invalid
+ * @returns {string}
+ */
+function safeProfileField(content, field, fallback = '') {
+  const value = content?.[field]
+  if (typeof value !== 'string') return fallback
+  const limit = PROFILE_FIELD_LIMITS[field] || 200
+  return value.slice(0, limit)
+}
+
+/**
  * Validate a profile image/banner URL
  * Prevents malicious URLs (javascript:, extremely long, etc.)
  * @param {string} url
@@ -105,6 +132,7 @@ export const MainProvider = ({ children }) => {
   /**
    * Apply cached profiles to accounts (instant display)
    * Returns accounts that need refreshing (stale or missing cache)
+   * Uses defensive field length limits to prevent memory abuse
    */
   const applyCachedProfiles = useCallback(async (accounts) => {
     const pubkeys = accounts.map(a => a.pubKey)
@@ -115,13 +143,14 @@ export const MainProvider = ({ children }) => {
       const { data: cached, isStale, isMissing } = cachedProfiles.get(account.pubKey) || { isStale: true, isMissing: true }
 
       if (cached) {
-        account.name = cached.name || cached.display_name || ''
-        account.about = cached.about || ''
+        // Apply defensive field length limits (DoS protection)
+        account.name = safeProfileField(cached, 'name') || safeProfileField(cached, 'display_name')
+        account.about = safeProfileField(cached, 'about')
         // Validate URLs even from cache (defense in depth)
         account.picture = isValidProfileUrl(cached.picture) ? cached.picture : account.picture
         account.banner = isValidProfileUrl(cached.banner) ? cached.banner : ''
-        account.nip05 = cached.nip05 || ''
-        account.lud16 = cached.lud16 || ''
+        account.nip05 = safeProfileField(cached, 'nip05')
+        account.lud16 = safeProfileField(cached, 'lud16')
       }
 
       // Track accounts that need refreshing
@@ -135,7 +164,13 @@ export const MainProvider = ({ children }) => {
 
   /**
    * Refresh profiles from network in background
-   * Uses outbox model: batch fetch relay lists, then fetch each profile from their write relays
+   *
+   * OUTBOX MODEL IMPLEMENTATION:
+   * - Batch fetch relay lists for all accounts
+   * - Fetch each profile from the user's OWN write relays (where they publish)
+   * - Never fetch profiles from our relays or the user's read relays
+   *
+   * Uses defensive field length limits to prevent memory abuse from malicious profiles.
    */
   const refreshProfilesInBackground = useCallback(async (accounts) => {
     if (accounts.length === 0) return
@@ -145,13 +180,14 @@ export const MainProvider = ({ children }) => {
     try {
       const pubkeys = accounts.map(a => a.pubKey)
 
-      // Batch fetch validated write relays for all accounts
+      // Batch fetch validated write relays for all accounts (outbox model)
       const writeRelaysMap = await getWriteRelaysBatch(pubkeys)
 
       // Fetch each account's profile from their own write relays (in parallel)
       const profilePromises = accounts.map(async (account) => {
         try {
           // Get validated write relays (with URL validation and fallback to defaults)
+          // These are where the user PUBLISHES, so this is where we READ from
           const relays = writeRelaysMap.get(account.pubKey) || DEFAULT_RELAYS
 
           const events = await pool.querySync(relays, {
@@ -188,18 +224,18 @@ export const MainProvider = ({ children }) => {
               ? content.banner
               : ''
 
-            // Cache the profile
+            // Cache the profile (raw content for future use)
             await setCachedProfile(account.pubKey, content, event)
 
-            // Return updated account data
+            // Return updated account data with defensive field limits
             return {
               pubKey: account.pubKey,
-              name: content.display_name || content.name || '',
-              about: content.about || '',
+              name: safeProfileField(content, 'display_name') || safeProfileField(content, 'name'),
+              about: safeProfileField(content, 'about'),
               picture: validatedPicture,
               banner: validatedBanner,
-              nip05: content.nip05 || '',
-              lud16: content.lud16 || ''
+              nip05: safeProfileField(content, 'nip05'),
+              lud16: safeProfileField(content, 'lud16')
             }
           }
         } catch (e) {

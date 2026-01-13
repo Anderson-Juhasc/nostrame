@@ -1,3 +1,28 @@
+/**
+ * Cache Service for Nostr Profile and Relay Data
+ *
+ * SECURITY ARCHITECTURE:
+ * - Uses browser.storage.session ONLY (not localStorage or persistent storage)
+ * - Session storage is automatically cleared when the browser closes
+ * - Cache is explicitly cleared on vault lock (see clearAllCaches)
+ * - No sensitive data persists beyond the browser session
+ *
+ * This design ensures:
+ * 1. Cached profiles/relay lists are not inspectable via DevTools after vault lock
+ * 2. No data survives browser restart (defense in depth)
+ * 3. Extension unload clears all cached state
+ *
+ * STALE CACHE SEMANTICS:
+ * - Stale cache (up to MAX_STALE_AGE) is used ONLY during network errors
+ * - This is explicitly DEGRADED MODE, not normal operation
+ * - Normal operation always serves fresh data or triggers background refresh
+ *
+ * TRADE-OFFS:
+ * - Session storage has lower capacity than localStorage (~5MB vs ~10MB)
+ * - Cache is lost on browser restart (acceptable for security)
+ * - Older browsers without session storage will have caching disabled
+ */
+
 import browser from 'webextension-polyfill'
 
 // Cache durations in milliseconds
@@ -8,6 +33,7 @@ export const CACHE_DURATIONS = {
 
 // Maximum age for stale cache fallback during network errors
 // Beyond this age, we won't use cached data even if network fails
+// Using stale data is DEGRADED MODE - not normal operation
 export const MAX_STALE_AGE = 24 * 60 * 60 * 1000 // 24 hours absolute maximum
 
 // Cooldown for manual refresh (prevents abuse)

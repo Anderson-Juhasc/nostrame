@@ -18,6 +18,7 @@ import {
   hasSessionPassword
 } from './common'
 import { clearAllCaches as clearProfileCaches } from './services/cache'
+import { closeDiscoveryPool } from './helpers/outbox'
 
 let openPrompt = null
 let promptMutex = new Mutex()
@@ -86,11 +87,18 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 })
 
+/**
+ * Clear all caches on vault lock or account change
+ * This is a SECURITY-CRITICAL function - ensures no sensitive data remains accessible
+ */
 function clearAllCaches() {
   secretsCache.clear()
   lastUsedAccount = null
-  // Also clear profile and relay caches for security
+  // Clear profile and relay caches from session storage
   clearProfileCaches()
+  // Close discovery pool WebSocket connections
+  // This prevents stale connections and ensures clean state
+  closeDiscoveryPool()
 }
 
 function getSharedSecret(sk, peer) {
