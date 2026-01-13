@@ -1,12 +1,14 @@
-import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { finalizeEvent } from 'nostr-tools/pure'
 import Modal from './Modal'
-import { pool, DEFAULT_RELAYS } from '../common'
+import { pool } from '../common'
+import { getWriteRelays } from '../helpers/outbox'
+import { setCachedProfile } from '../services/cache'
 
 const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
-  const [showModal, setShowModal] = useState(isOpen);
+  const [showModal, setShowModal] = useState(isOpen)
+  const [publishing, setPublishing] = useState(false)
   const [account, setAccount] = useState({
     name: '',
     about: '',
@@ -14,7 +16,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
     banner: '',
     nip05: '',
     lud16: '',
-  });
+  })
 
   useEffect(() => {
     setAccount({
@@ -36,7 +38,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
   }
 
   const accountChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setAccount(prevAccount => ({
       ...prevAccount,
       [name]: value
@@ -45,33 +47,42 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
 
   const saveAccount = async (e) => {
     e.preventDefault()
-    const storage = await browser.storage.local.get(['relays'])
-
-    let relays = storage.relays?.length > 0 ? storage.relays : DEFAULT_RELAYS
+    setPublishing(true)
 
     try {
-      let event = {
+      // Get user's write relays using outbox model
+      const relays = await getWriteRelays(accountData.pubKey)
+
+      const profileContent = {
+        name: account.name,
+        display_name: account.name,
+        about: account.about,
+        picture: account.picture,
+        banner: account.banner,
+        nip05: account.nip05,
+        lud16: account.lud16,
+      }
+
+      const event = {
         kind: 0,
         created_at: Math.floor(Date.now() / 1000),
         tags: [],
-        content: JSON.stringify({
-          name: account.name,
-          display_name: account.name,
-          about: account.about,
-          picture: account.picture,
-          banner: account.banner,
-          nip05: account.nip05,
-          lud16: account.lud16,
-        }),
+        content: JSON.stringify(profileContent),
       }
 
       const signedEvent = finalizeEvent(event, accountData.prvKey)
       await Promise.any(pool.publish(relays, signedEvent))
 
+      // Update profile cache with new data
+      await setCachedProfile(accountData.pubKey, profileContent, signedEvent)
+
       toast.success('Profile updated successfully')
       callBack()
     } catch (error) {
+      console.error('Failed to update profile:', error)
       toast.error('Failed to update profile')
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -134,7 +145,9 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
             onChange={accountChange}
           />
           <br />
-          <button className="btn" type="submit">Save</button>
+          <button className="btn" type="submit" disabled={publishing}>
+            {publishing ? 'Saving...' : 'Save'}
+          </button>
         </form>
       </Modal>
     </div>

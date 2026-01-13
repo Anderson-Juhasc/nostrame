@@ -3,12 +3,14 @@ import React, { useState, useEffect, useContext } from 'react'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
 import { privateKeyFromSeedWords, generateSeedWords, validateWords } from 'nostr-tools/nip06'
-import { bytesToHex } from 'nostr-tools/utils'
+import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
+import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { Link, Navigate } from 'react-router-dom'
 import { encrypt, setSessionPassword, setSessionVault } from '../common'
 import { useAuth } from '../middlewares/AuthContext'
 import MainContext from '../contexts/MainContext'
 import Loading from '../components/Loading'
+import { ensureRelayListExists } from '../helpers/outbox'
 
 const Signup = () => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -89,6 +91,11 @@ const Signup = () => {
 
       await login()
       await updateAccounts()
+
+      // Publish default relay list if account doesn't have one
+      const pubkey = getPublicKey(hexToBytes(prvKey))
+      ensureRelayListExists(pubkey, hexToBytes(prvKey), finalizeEvent)
+
       toast.success('Vault created successfully')
 
       return navigate('/vault')

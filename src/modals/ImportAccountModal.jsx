@@ -6,9 +6,11 @@ import * as nip19 from 'nostr-tools/nip19'
 import * as nip49 from 'nostr-tools/nip49'
 import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
+import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { encrypt, getSessionPassword, getSessionVault, setSessionVault } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
+import { ensureRelayListExists } from '../helpers/outbox'
 
 const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
   const { updateAccounts } = useContext(MainContext)
@@ -80,6 +82,10 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         await setSessionVault(vault)
         await updateAccounts()
 
+        // Publish default relay list if account doesn't have one
+        const pubkey = getPublicKey(hexToBytes(prvKeyHex))
+        ensureRelayListExists(pubkey, hexToBytes(prvKeyHex), finalizeEvent)
+
         toast.success('Account imported successfully')
         callBack()
         navigate('/vault')
@@ -106,6 +112,10 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           await browser.storage.local.set({ encryptedVault })
           await setSessionVault(vault)
           await updateAccounts()
+
+          // Publish default relay list if account doesn't have one
+          const pubkey = getPublicKey(hexToBytes(prvKeyHex))
+          ensureRelayListExists(pubkey, hexToBytes(prvKeyHex), finalizeEvent)
 
           toast.success('Account imported successfully')
           callBack()
@@ -138,6 +148,10 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         await setSessionVault(vault)
         await updateAccounts()
 
+        // Publish default relay list if account doesn't have one
+        const pubkey = getPublicKey(prvKeyBytes)
+        ensureRelayListExists(pubkey, prvKeyBytes, finalizeEvent)
+
         toast.success('Account imported successfully')
         callBack()
 
@@ -167,6 +181,10 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
         await browser.storage.local.set({ encryptedVault })
         await setSessionVault(vault)
         await updateAccounts()
+
+        // Publish default relay list if account doesn't have one
+        const pubkey = getPublicKey(prvKeyBytes)
+        ensureRelayListExists(pubkey, prvKeyBytes, finalizeEvent)
 
         toast.success('Account imported successfully')
         callBack()

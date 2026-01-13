@@ -2,11 +2,12 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect, useContext } from 'react'
 import { toast } from 'react-toastify'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
-import { bytesToHex } from 'nostr-tools/utils'
-import { finalizeEvent } from 'nostr-tools/pure'
+import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
+import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { encrypt, getSessionPassword, getSessionVault, setSessionVault, pool, DEFAULT_RELAYS } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
+import { ensureRelayListExists, fetchRelayList } from '../helpers/outbox'
 
 const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
   const { updateAccounts } = useContext(MainContext)
@@ -26,7 +27,6 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
   const addAccount = async (e) => {
     e.preventDefault()
 
-    const storage = await browser.storage.local.get(['relays'])
     const vault = await getSessionVault()
     const password = await getSessionPassword()
 
@@ -37,13 +37,35 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
 
     vault.accountIndex++
     const prvKey = bytesToHex(privateKeyFromSeedWords(vault.mnemonic, vault.passphrase, vault.accountIndex))
+    const prvKeyBytes = hexToBytes(prvKey)
+    const pubkey = getPublicKey(prvKeyBytes)
+
     vault.accounts.push({
       prvKey,
     })
     vault.accountDefault = prvKey
 
+    const encryptedVault = encrypt(vault, password)
+    await browser.storage.local.set({ encryptedVault })
+    await setSessionVault(vault)
+    await updateAccounts()
+
+    // Ensure relay list exists first (publishes default relays if none exist)
+    await ensureRelayListExists(pubkey, prvKeyBytes, finalizeEvent)
+
+    // Publish profile using outbox model (write relays)
     if (name && name !== '') {
-      const relays = storage.relays?.length > 0 ? storage.relays : DEFAULT_RELAYS
+      let relays = DEFAULT_RELAYS
+      try {
+        const { relays: relayList } = await fetchRelayList(pubkey)
+        const writeRelays = relayList.filter(r => r.write).map(r => r.url)
+        if (writeRelays.length > 0) {
+          relays = writeRelays
+        }
+      } catch (err) {
+        console.error('Failed to fetch relay list, using defaults:', err)
+      }
+
       const event = {
         kind: 0,
         created_at: Math.floor(Date.now() / 1000),
@@ -57,11 +79,6 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
       const signedEvent = finalizeEvent(event, prvKey)
       await Promise.any(pool.publish(relays, signedEvent))
     }
-
-    const encryptedVault = encrypt(vault, password)
-    await browser.storage.local.set({ encryptedVault })
-    await setSessionVault(vault)
-    await updateAccounts()
 
     setName('')
     toast.success('Account created successfully')

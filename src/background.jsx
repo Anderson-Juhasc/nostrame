@@ -17,6 +17,7 @@ import {
   clearSessionVault,
   hasSessionPassword
 } from './common'
+import { clearAllCaches as clearProfileCaches } from './services/cache'
 
 let openPrompt = null
 let promptMutex = new Mutex()
@@ -88,6 +89,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 function clearAllCaches() {
   secretsCache.clear()
   lastUsedAccount = null
+  // Also clear profile and relay caches for security
+  clearProfileCaches()
 }
 
 function getSharedSecret(sk, peer) {

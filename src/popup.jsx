@@ -12,6 +12,7 @@ import SignupPage from './pages/SignupPage'
 import VaultPage from './pages/VaultPage'
 import NotFoundPage from './pages/NotFoundPage'
 import GeneratorPage from './pages/GeneratorPage'
+import RelaysPage from './pages/RelaysPage'
 
 // Connect to background to pause lock timer while popup is open
 browser.runtime.connect({ name: 'ui-active' })
@@ -30,6 +31,7 @@ const App = () => {
             <Route path="signup" element={<SignupPage />} />
             <Route path="vault" element={<PrivateRoute Component={VaultPage} />} />
             <Route path="generator" element={<PrivateRoute Component={GeneratorPage} />} />
+            <Route path="relays" element={<PrivateRoute Component={RelaysPage} />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

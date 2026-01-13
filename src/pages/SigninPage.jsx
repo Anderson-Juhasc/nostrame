@@ -2,11 +2,13 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06'
-import { bytesToHex } from 'nostr-tools/utils'
+import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
+import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { encrypt, setSessionPassword, setSessionVault } from '../common'
 import { useAuth } from '../middlewares/AuthContext'
 import Loading from '../components/Loading'
+import { ensureRelayListExists } from '../helpers/outbox'
 
 const Signin = () => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -84,6 +86,11 @@ const Signin = () => {
       })
 
       await login()
+
+      // Publish default relay list if account doesn't have one
+      const pubkey = getPublicKey(hexToBytes(prvKey))
+      ensureRelayListExists(pubkey, hexToBytes(prvKey), finalizeEvent)
+
       toast.success('Vault imported successfully')
 
       return navigate('/vault')

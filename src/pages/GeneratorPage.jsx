@@ -180,7 +180,7 @@ const GeneratorPage = () => {
                 <input
                   type="text"
                   readOnly
-                  value={format === 'bech32' ? account.nsec : account.prvKey}
+                  value={format === 'bech32' ? (account.nsec || '') : (account.prvKey || '')}
                   onClick={(e) => e.target.select()}
                 />
               </div>
@@ -203,7 +203,7 @@ const GeneratorPage = () => {
                 <input
                   type="text"
                   readOnly
-                  value={format === 'bech32' ? account.npub : account.pubKey}
+                  value={format === 'bech32' ? (account.npub || '') : (account.pubKey || '')}
                   onClick={(e) => e.target.select()}
                 />
               </div>

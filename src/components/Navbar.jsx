@@ -27,6 +27,12 @@ const Navbar = () => {
             </NavLink>
             </li>
             <li>
+            <NavLink to="/relays" className={({ isActive }) => isActive ? 'active' : ''}>
+                <i className="icon-sphere"></i>
+                Relays
+            </NavLink>
+            </li>
+            <li>
             <a href="#" onClick={(e) => { e.preventDefault(); openOptionsButton() }} title="Options">
                 <i className="icon-cog"></i>
                 Options

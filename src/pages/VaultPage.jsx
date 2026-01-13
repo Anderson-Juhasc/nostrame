@@ -8,9 +8,10 @@ import ConfirmModal from '../modals/ConfirmModal'
 import Loading from '../components/Loading'
 import MainContext from '../contexts/MainContext'
 import { encrypt, removePermissions, getSessionPassword, getSessionVault, setSessionVault } from '../common'
+import { removeAccountCache } from '../services/cache'
 
 const VaultPage = () => {
-  const { accounts, defaultAccount, loading, updateAccounts } = useContext(MainContext)
+  const { accounts, defaultAccount, loading, refreshing, updateAccounts, forceRefreshCurrentProfile, checkRefreshCooldown, REFRESH_COOLDOWN } = useContext(MainContext)
 
   const [showEditAccountModal, setEditAccountModal] = useState(false)
   const [accountEditing, setAccountEditing] = useState({})
@@ -21,9 +22,53 @@ const VaultPage = () => {
   const [showCopyDropdown, setShowCopyDropdown] = useState(false)
   const [showAllHosts, setShowAllHosts] = useState(false)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, danger: false })
+  const [cooldownRemaining, setCooldownRemaining] = useState(0)
   const copyDropdownRef = useRef(null)
 
   const INITIAL_HOSTS_LIMIT = 3
+
+  // Handle manual profile refresh with cooldown
+  const handleRefreshProfile = async (e) => {
+    e.preventDefault()
+    if (refreshing || cooldownRemaining > 0) return
+
+    const result = await forceRefreshCurrentProfile()
+    if (result.success) {
+      toast.success('Profile refreshed')
+    } else if (result.remainingMs) {
+      setCooldownRemaining(Math.ceil(result.remainingMs / 1000))
+      toast.info(`Please wait ${Math.ceil(result.remainingMs / 1000)}s before refreshing again`)
+    }
+  }
+
+  // Check cooldown on mount and update countdown
+  useEffect(() => {
+    let interval
+    const updateCooldown = async () => {
+      const { allowed, remainingMs } = await checkRefreshCooldown()
+      if (!allowed && remainingMs > 0) {
+        setCooldownRemaining(Math.ceil(remainingMs / 1000))
+      } else {
+        setCooldownRemaining(0)
+      }
+    }
+
+    updateCooldown()
+
+    if (cooldownRemaining > 0) {
+      interval = setInterval(() => {
+        setCooldownRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(interval)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => clearInterval(interval)
+  }, [checkRefreshCooldown, cooldownRemaining > 0])
 
   const copyToClipboard = (e, text) => {
     e.preventDefault()
@@ -117,6 +162,9 @@ const VaultPage = () => {
   const hasMoreHosts = policyEntries.length > INITIAL_HOSTS_LIMIT
 
   const deleteImportedAccount = (prvKey) => {
+    // Find the account to get its pubKey for cache cleanup
+    const accountToDelete = accounts.find(acc => acc.prvKey === prvKey)
+
     setConfirmModal({
       isOpen: true,
       title: 'Delete Account',
@@ -140,6 +188,12 @@ const VaultPage = () => {
           const encryptedVault = encrypt(vault, password)
           await browser.storage.local.set({ encryptedVault })
           await setSessionVault(vault)
+
+          // Clean up cached data for the deleted account
+          if (accountToDelete?.pubKey) {
+            await removeAccountCache(accountToDelete.pubKey)
+          }
+
           await updateAccounts()
         }
       }
@@ -175,6 +229,16 @@ const VaultPage = () => {
         <div className="profile__body">
           <img className="profile__img" src={isValidUrl(defaultAccount.picture) ? defaultAccount.picture : ''} alt="" />
           <ul className="profile__nav">
+            <li>
+              <a
+                href="#"
+                onClick={handleRefreshProfile}
+                title={cooldownRemaining > 0 ? `Wait ${cooldownRemaining}s` : 'Refresh profile'}
+                className={refreshing || cooldownRemaining > 0 ? 'disabled' : ''}
+              >
+                <i className={`icon-loop2 ${refreshing ? 'spinning' : ''}`}></i>
+              </a>
+            </li>
             <li>
               <a href="#" onClick={(e) => { e.preventDefault(); setEditAccountModal(true); setAccountEditing(defaultAccount) }}>
                 <i className="icon-pencil"></i>
