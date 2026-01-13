@@ -13,11 +13,12 @@ import {
   showNotification,
   getPosition,
   getSessionVault,
+  getSessionPassword,
   clearSessionPassword,
   clearSessionVault,
   hasSessionPassword
 } from './common'
-import { clearAllCaches as clearProfileCaches } from './services/cache'
+import { clearAllCaches as clearProfileCaches, persistEncryptedCaches } from './services/cache'
 import { closeDiscoveryPool } from './helpers/outbox'
 
 let openPrompt = null
@@ -36,6 +37,12 @@ let activeConnections = new Set()
 async function lockVault() {
   const { isAuthenticated } = await browser.storage.local.get(['isAuthenticated'])
   if (!isAuthenticated) return // Don't lock if not authenticated
+
+  // Persist encrypted caches before clearing session
+  const password = await getSessionPassword()
+  if (password) {
+    await persistEncryptedCaches(password)
+  }
 
   await clearSessionPassword()
   await clearSessionVault()

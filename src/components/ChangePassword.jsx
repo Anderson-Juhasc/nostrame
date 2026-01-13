@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
 import { encrypt, decrypt, setSessionPassword } from '../common'
+import { persistEncryptedCaches } from '../services/cache'
 import ConfirmModal from '../modals/ConfirmModal'
 
 const ChangePassword = ({ fetchData }) => {
@@ -47,6 +48,10 @@ const ChangePassword = ({ fetchData }) => {
       await browser.storage.local.set({
         encryptedVault,
       })
+
+      // Re-encrypt caches with new password
+      await persistEncryptedCaches(changePassword.newPassword)
+
       setChangePassword({
         currentPassword: '',
         newPassword: '',

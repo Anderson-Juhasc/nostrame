@@ -11,6 +11,7 @@ import {
   setSessionVault,
   getSessionVault
 } from './common'
+import { restoreEncryptedCaches } from './services/cache'
 import {getPublicKey} from 'nostr-tools/pure'
 
 function shortenPubkey(pubkey) {
@@ -94,6 +95,9 @@ function Prompt() {
       await setSessionPassword(password)
       await setSessionVault(vaultData)
       await browser.storage.local.set({ isLocked: false })
+
+      // Restore encrypted caches from local storage
+      await restoreEncryptedCaches(password)
 
       // Get the pubkey from the unlocked vault
       if (vaultData?.accountDefault) {

@@ -2,15 +2,16 @@
  * Cache Service for Nostr Profile and Relay Data
  *
  * SECURITY ARCHITECTURE:
- * - Uses browser.storage.session ONLY (not localStorage or persistent storage)
- * - Session storage is automatically cleared when the browser closes
- * - Cache is explicitly cleared on vault lock (see clearAllCaches)
- * - No sensitive data persists beyond the browser session
+ * - Uses browser.storage.session for active cache (fast access while unlocked)
+ * - Encrypted caches persisted to local storage on vault lock
+ * - On unlock, encrypted caches are restored to session storage
+ * - Encryption uses the same password/key as the vault
  *
  * This design ensures:
- * 1. Cached profiles/relay lists are not inspectable via DevTools after vault lock
- * 2. No data survives browser restart (defense in depth)
- * 3. Extension unload clears all cached state
+ * 1. Cached profiles/relay lists are encrypted at rest in local storage
+ * 2. Fast access while unlocked (session storage)
+ * 3. Data survives browser restart (encrypted in local storage)
+ * 4. No plaintext cache data accessible after vault lock
  *
  * STALE CACHE SEMANTICS:
  * - Stale cache (up to MAX_STALE_AGE) is used ONLY during network errors
@@ -18,12 +19,13 @@
  * - Normal operation always serves fresh data or triggers background refresh
  *
  * TRADE-OFFS:
- * - Session storage has lower capacity than localStorage (~5MB vs ~10MB)
- * - Cache is lost on browser restart (acceptable for security)
+ * - Local storage has ~10MB limit - cache size should be monitored
+ * - Encryption adds small overhead on lock/unlock
  * - Older browsers without session storage will have caching disabled
  */
 
 import browser from 'webextension-polyfill'
+import { encrypt, decrypt } from '../common'
 
 // Cache durations in milliseconds
 export const CACHE_DURATIONS = {
@@ -46,7 +48,8 @@ const CACHE_VERSION = 2
 const KEYS = {
   RELAY_LIST_CACHE: 'relayListCache',
   PROFILE_CACHE: 'profileCache',
-  LAST_REFRESH: 'lastProfileRefresh'
+  LAST_REFRESH: 'lastProfileRefresh',
+  ENCRYPTED_CACHE: 'encryptedCache' // For persistent encrypted storage
 }
 
 // Track if we've already warned about missing session storage
@@ -633,5 +636,117 @@ export async function recordProfileRefresh(pubkey) {
     await storage.set({ [KEYS.LAST_REFRESH]: lastRefresh })
   } catch (e) {
     console.error('Failed to record profile refresh:', e)
+  }
+}
+
+/**
+ * Encrypt and persist caches to local storage
+ * Call this before locking the vault to preserve cache data
+ * @param {string} password - The vault password for encryption
+ */
+export async function persistEncryptedCaches(password) {
+  if (!password) {
+    console.error('Cannot persist caches: no password provided')
+    return
+  }
+
+  try {
+    const storage = getStorage()
+    if (!storage) return
+
+    // Get all cache data from session storage
+    const result = await storage.get([
+      KEYS.RELAY_LIST_CACHE,
+      KEYS.PROFILE_CACHE,
+      KEYS.LAST_REFRESH
+    ])
+
+    const cacheData = {
+      relayListCache: result[KEYS.RELAY_LIST_CACHE] || {},
+      profileCache: result[KEYS.PROFILE_CACHE] || {},
+      lastRefresh: result[KEYS.LAST_REFRESH] || {},
+      version: CACHE_VERSION,
+      timestamp: Date.now()
+    }
+
+    // Only persist if there's actual data
+    const hasData = Object.keys(cacheData.relayListCache).length > 0 ||
+                    Object.keys(cacheData.profileCache).length > 0
+
+    if (!hasData) {
+      console.log('No cache data to persist')
+      return
+    }
+
+    // Encrypt and store in local storage
+    const encryptedCache = encrypt(cacheData, password)
+    await browser.storage.local.set({ [KEYS.ENCRYPTED_CACHE]: encryptedCache })
+    console.log('Caches encrypted and persisted to local storage')
+  } catch (e) {
+    console.error('Failed to persist encrypted caches:', e)
+  }
+}
+
+/**
+ * Restore encrypted caches from local storage to session storage
+ * Call this after unlocking the vault
+ * @param {string} password - The vault password for decryption
+ * @returns {Promise<boolean>} - True if caches were restored successfully
+ */
+export async function restoreEncryptedCaches(password) {
+  if (!password) {
+    console.error('Cannot restore caches: no password provided')
+    return false
+  }
+
+  try {
+    const storage = getStorage()
+    if (!storage) return false
+
+    // Get encrypted cache from local storage
+    const { [KEYS.ENCRYPTED_CACHE]: encryptedCache } = await browser.storage.local.get(KEYS.ENCRYPTED_CACHE)
+
+    if (!encryptedCache) {
+      console.log('No encrypted cache found in local storage')
+      return false
+    }
+
+    // Decrypt the cache data
+    const cacheData = decrypt(encryptedCache, password)
+
+    // Validate cache version
+    if (cacheData.version !== CACHE_VERSION) {
+      console.log('Encrypted cache version mismatch, discarding')
+      await browser.storage.local.remove(KEYS.ENCRYPTED_CACHE)
+      return false
+    }
+
+    // Restore to session storage
+    await storage.set({
+      [KEYS.RELAY_LIST_CACHE]: cacheData.relayListCache || {},
+      [KEYS.PROFILE_CACHE]: cacheData.profileCache || {},
+      [KEYS.LAST_REFRESH]: cacheData.lastRefresh || {}
+    })
+
+    console.log('Caches restored from encrypted local storage')
+    return true
+  } catch (e) {
+    console.error('Failed to restore encrypted caches:', e)
+    // Remove corrupted encrypted cache
+    await browser.storage.local.remove(KEYS.ENCRYPTED_CACHE).catch(() => {})
+    return false
+  }
+}
+
+/**
+ * Clear the encrypted cache from local storage
+ * Call this when the vault is reset or user logs out completely
+ */
+export async function clearEncryptedCache() {
+  try {
+    await browser.storage.local.remove(KEYS.ENCRYPTED_CACHE)
+    console.log('Encrypted cache cleared from local storage')
+  } catch (e) {
+    console.error('Failed to clear encrypted cache:', e)
   }
 }

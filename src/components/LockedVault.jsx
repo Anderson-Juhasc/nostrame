@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
 import { decrypt, setSessionPassword, setSessionVault } from '../common'
+import { restoreEncryptedCaches } from '../services/cache'
 
 const LockedVault = ({ fetchData }) => {
   const [password, setPassword] = useState('')
@@ -16,6 +17,9 @@ const LockedVault = ({ fetchData }) => {
       await setSessionPassword(password)
       await setSessionVault(vaultData)
       await browser.storage.local.set({ isLocked: false })
+
+      // Restore encrypted caches from local storage
+      await restoreEncryptedCaches(password)
 
       setPassword('')
       toast.success('Vault unlocked')

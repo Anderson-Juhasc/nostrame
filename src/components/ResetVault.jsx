@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { clearSessionPassword, clearSessionVault } from '../common'
+import { clearEncryptedCache } from '../services/cache'
 import ConfirmModal from '../modals/ConfirmModal'
 
 const ResetVault = ({ fetchData }) => {
@@ -9,6 +10,8 @@ const ResetVault = ({ fetchData }) => {
   const handleConfirmReset = async () => {
     await clearSessionPassword()
     await clearSessionVault()
+    // Clear encrypted cache from local storage
+    await clearEncryptedCache()
     // Remove vault from local storage (cleanup old data) and reset state
     await browser.storage.local.remove(['vault', 'policies'])
     await browser.storage.local.set({
