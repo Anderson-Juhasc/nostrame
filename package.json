@@ -1,7 +1,6 @@
 {
   "name": "nostrame",
-  "version": "0.1.2",
-  "license": "WTFPL",
+  "license": "Unlicense",
   "type": "module",
   "dependencies": {
     "async-mutex": "^0.5.0",
