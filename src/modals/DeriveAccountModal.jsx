@@ -4,7 +4,7 @@ import { toast } from 'react-toastify'
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
-import { encrypt, getSessionPassword, getSessionVault, setSessionVault, pool, DEFAULT_RELAYS } from '../common'
+import { getSessionVault, setSessionVault, pool, DEFAULT_RELAYS } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
 import { ensureRelayListExists, fetchRelayList } from '../helpers/outbox'
@@ -28,9 +28,8 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     e.preventDefault()
 
     const vault = await getSessionVault()
-    const password = await getSessionPassword()
 
-    if (!password || !vault) {
+    if (!vault) {
       toast.error('Session expired. Please unlock your vault again.')
       return
     }
@@ -45,8 +44,18 @@ const DeriveAccountModal = ({ isOpen, onClose, callBack }) => {
     })
     vault.accountDefault = prvKey
 
-    const encryptedVault = encrypt(vault, password)
-    await browser.storage.local.set({ encryptedVault })
+    // Encrypt via background (key stays in background memory)
+    const response = await browser.runtime.sendMessage({
+      type: 'ENCRYPT_VAULT',
+      data: vault
+    })
+
+    if (!response.success) {
+      toast.error('Failed to save vault. Please unlock again.')
+      return
+    }
+
+    await browser.storage.local.set({ encryptedVault: response.encryptedData })
     await setSessionVault(vault)
     await updateAccounts()
 

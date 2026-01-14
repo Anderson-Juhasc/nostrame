@@ -9,8 +9,6 @@ import ResetVault from './components/ResetVault'
 import ImportVault from './components/ImportVault'
 import ExportVault from './components/ExportVault'
 import Secrets from './components/Secrets'
-import { decrypt, setSessionPassword, setSessionVault } from './common'
-import { restoreEncryptedCaches } from './services/cache'
 
 // Connect to background to pause lock timer while options page is open
 browser.runtime.connect({ name: 'ui-active' })
@@ -30,23 +28,20 @@ function Options() {
   const unlockVault = async (e) => {
     e.preventDefault()
 
-    try {
-      const storage = await browser.storage.local.get(['encryptedVault'])
-      const vaultData = decrypt(storage.encryptedVault, password)
+    // Send unlock request to background (key stays in background memory)
+    const response = await browser.runtime.sendMessage({
+      type: 'UNLOCK_VAULT',
+      password: password
+    })
 
-      await setSessionPassword(password)
-      await setSessionVault(vaultData)
-      await browser.storage.local.set({ isLocked: false })
+    // Clear password from UI memory immediately
+    setPassword('')
 
-      // Restore encrypted caches from local storage
-      await restoreEncryptedCaches(password)
-
-      setPassword('')
+    if (response.success) {
       toast.success('Vault unlocked')
       fetchData()
-    } catch (err) {
-      toast.error('Invalid password')
-      setPassword('')
+    } else {
+      toast.error(response.error || 'Invalid password')
     }
   }
 

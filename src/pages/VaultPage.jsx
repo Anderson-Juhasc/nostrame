@@ -7,7 +7,7 @@ import AccountDetailsModal from '../modals/AccountDetailsModal'
 import ConfirmModal from '../modals/ConfirmModal'
 import Loading from '../components/Loading'
 import MainContext from '../contexts/MainContext'
-import { encrypt, removePermissions, getSessionPassword, getSessionVault, setSessionVault } from '../common'
+import { removePermissions, getSessionVault, setSessionVault } from '../common'
 import { removeAccountCache } from '../services/cache'
 
 const VaultPage = () => {
@@ -172,9 +172,8 @@ const VaultPage = () => {
       danger: true,
       onConfirm: async () => {
         const vault = await getSessionVault()
-        const password = await getSessionPassword()
 
-        if (!password || !vault) {
+        if (!vault) {
           toast.error('Session expired. Please unlock your vault again.')
           return
         }
@@ -185,8 +184,18 @@ const VaultPage = () => {
           vault.importedAccounts.splice(index, 1)
           vault.accountDefault = undefined
 
-          const encryptedVault = encrypt(vault, password)
-          await browser.storage.local.set({ encryptedVault })
+          // Encrypt via background (key stays in background memory)
+          const response = await browser.runtime.sendMessage({
+            type: 'ENCRYPT_VAULT',
+            data: vault
+          })
+
+          if (!response.success) {
+            toast.error('Failed to save vault. Please unlock again.')
+            return
+          }
+
+          await browser.storage.local.set({ encryptedVault: response.encryptedData })
           await setSessionVault(vault)
 
           // Clean up cached data for the deleted account

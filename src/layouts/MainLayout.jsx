@@ -6,7 +6,6 @@ import HeaderVault from '../components/HeaderVault'
 import Navbar from '../components/Navbar'
 import LockedVault from '../components/LockedVault'
 import { MainProvider } from '../contexts/MainContext'
-import { hasSessionPassword } from '../common'
 
 const MainLayout = () => {
   const [isLocked, setIsLocked] = useState(false)
@@ -14,8 +13,9 @@ const MainLayout = () => {
 
   const fetchData = useCallback(async () => {
     const storage = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
-    const hasPassword = await hasSessionPassword()
-    if (storage.isAuthenticated && !hasPassword) {
+    // Check if key is in background memory
+    const { unlocked } = await browser.runtime.sendMessage({ type: 'GET_LOCK_STATUS' })
+    if (storage.isAuthenticated && !unlocked) {
       setIsLocked(true)
       setIsAuthenticated(true)
       return

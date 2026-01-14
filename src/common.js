@@ -1,6 +1,17 @@
+/**
+ * Common Utilities for Nostrame Extension
+ *
+ * This module contains non-cryptographic utilities shared across components.
+ * All cryptographic operations are in crypto.js and should only be used
+ * in the background service worker.
+ */
+
 import browser from 'webextension-polyfill'
-import CryptoJS from 'crypto-js'
 import { SimplePool } from 'nostr-tools/pool'
+
+// ============================================================================
+// NOSTR POOL
+// ============================================================================
 
 // Shared pool instance - reuse across all components
 export const pool = new SimplePool({
@@ -17,12 +28,12 @@ export const DEFAULT_RELAYS = [
 ]
 
 // ============================================================================
-// SESSION PASSWORD MANAGER
-// Password is stored in browser.storage.session - persists across popup
-// opens/closes but clears when browser closes (more secure than local storage)
+// SESSION STORAGE HELPERS
 // ============================================================================
 
-// Get the session storage API (chrome.storage.session or browser.storage.session)
+/**
+ * Get the session storage API (chrome.storage.session or browser.storage.session)
+ */
 function getSessionStorage() {
   // Try multiple ways to access Chrome's session storage
   const chromeSession = globalThis.chrome?.storage?.session ||
@@ -42,34 +53,10 @@ function getSessionStorage() {
   return null
 }
 
-export async function setSessionPassword(password) {
-  const sessionStorage = getSessionStorage()
-  if (sessionStorage) {
-    await sessionStorage.set({ sessionPassword: password })
-  }
-}
-
-export async function getSessionPassword() {
-  const sessionStorage = getSessionStorage()
-  if (sessionStorage) {
-    const result = await sessionStorage.get('sessionPassword')
-    return result.sessionPassword || null
-  }
-  return null
-}
-
-export async function clearSessionPassword() {
-  const sessionStorage = getSessionStorage()
-  if (sessionStorage) {
-    await sessionStorage.remove('sessionPassword')
-  }
-}
-
-export async function hasSessionPassword() {
-  const password = await getSessionPassword()
-  return password !== null
-}
-
+/**
+ * Store decrypted vault in session storage
+ * @param {object} vault - Decrypted vault data
+ */
 export async function setSessionVault(vault) {
   const sessionStorage = getSessionStorage()
   if (sessionStorage) {
@@ -77,6 +64,10 @@ export async function setSessionVault(vault) {
   }
 }
 
+/**
+ * Get decrypted vault from session storage
+ * @returns {Promise<object|null>}
+ */
 export async function getSessionVault() {
   const sessionStorage = getSessionStorage()
   if (sessionStorage) {
@@ -86,6 +77,9 @@ export async function getSessionVault() {
   return null
 }
 
+/**
+ * Clear vault from session storage
+ */
 export async function clearSessionVault() {
   const sessionStorage = getSessionStorage()
   if (sessionStorage) {
@@ -93,35 +87,9 @@ export async function clearSessionVault() {
   }
 }
 
-function deriveKey(password, salt) {
-  const iterations = 10000
-  const keyLength = 256
-  return CryptoJS.PBKDF2(password, salt, { keySize: keyLength / 32, iterations: iterations })
-}
-
-export function encrypt(data, password) {
-  const salt = CryptoJS.lib.WordArray.random(128 / 8)
-  const derivedKey = deriveKey(password, salt)
-  const iv = CryptoJS.lib.WordArray.random(128 / 8)
-  const encrypted = CryptoJS.AES.encrypt(
-    JSON.stringify(data),
-    derivedKey,
-    { iv: iv }
-  )
-
-  // Convert the salt, IV, and encrypted data to a single string
-  return salt.toString() + iv.toString() + encrypted.toString()
-}
-
-export function decrypt(encryptedData, password) {
-  const salt = CryptoJS.enc.Hex.parse(encryptedData.substring(0, 32))
-  const iv = CryptoJS.enc.Hex.parse(encryptedData.substring(32, 64))
-  const encrypted = encryptedData.substring(64)
-  const derivedKey = deriveKey(password, salt)
-  const decrypted = CryptoJS.AES.decrypt(encrypted, derivedKey, { iv: iv })
-
-  return JSON.parse(decrypted.toString(CryptoJS.enc.Utf8))
-}
+// ============================================================================
+// PERMISSIONS
+// ============================================================================
 
 export const NO_PERMISSIONS_REQUIRED = {
   replaceURL: true
@@ -231,6 +199,10 @@ export async function removePermissions(host, accept, type) {
   browser.storage.local.set({policies})
 }
 
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
 export async function showNotification(host, answer, type, params) {
   let {notifications} = await browser.storage.local.get('notifications')
   if (notifications) {
@@ -253,6 +225,10 @@ export async function showNotification(host, answer, type, params) {
     })
   }
 }
+
+// ============================================================================
+// WINDOW POSITIONING
+// ============================================================================
 
 export async function getPosition(width, height) {
   let left = 0

@@ -5,7 +5,7 @@ import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { encrypt, setSessionPassword, setSessionVault } from '../common'
+// Crypto operations happen in background - we just send messages
 import { useAuth } from '../middlewares/AuthContext'
 import Loading from '../components/Loading'
 import { ensureRelayListExists } from '../helpers/outbox'
@@ -75,13 +75,20 @@ const Signin = () => {
 
       vaultData.accountDefault = prvKey
 
-      const encryptedVault = encrypt(vaultData, password)
+      // Create new vault via background (key stays in background memory)
+      const response = await browser.runtime.sendMessage({
+        type: 'CREATE_NEW_VAULT',
+        password: password,
+        vaultData: vaultData
+      })
 
-      await setSessionPassword(password)
-      await setSessionVault(vaultData)
+      if (!response.success) {
+        toast.error(response.error || 'Failed to create vault')
+        return
+      }
 
       await browser.storage.local.set({
-        encryptedVault,
+        encryptedVault: response.encryptedVault,
         isAuthenticated: true,
       })
 

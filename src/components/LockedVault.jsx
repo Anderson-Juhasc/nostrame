@@ -1,8 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
-import { decrypt, setSessionPassword, setSessionVault } from '../common'
-import { restoreEncryptedCaches } from '../services/cache'
 
 const LockedVault = ({ fetchData }) => {
   const [password, setPassword] = useState('')
@@ -11,22 +9,25 @@ const LockedVault = ({ fetchData }) => {
     e.preventDefault()
 
     try {
-      const storage = await browser.storage.local.get(['encryptedVault'])
-      const vaultData = decrypt(storage.encryptedVault, password)
+      // Send unlock request to background (key stays in background memory)
+      const response = await browser.runtime.sendMessage({
+        type: 'UNLOCK_VAULT',
+        password: password
+      })
 
-      await setSessionPassword(password)
-      await setSessionVault(vaultData)
-      await browser.storage.local.set({ isLocked: false })
-
-      // Restore encrypted caches from local storage
-      await restoreEncryptedCaches(password)
-
+      // Clear password from UI memory immediately
       setPassword('')
-      toast.success('Vault unlocked')
-      if (fetchData) fetchData()
+
+      if (response && response.success) {
+        toast.success('Vault unlocked')
+        if (fetchData) fetchData()
+      } else {
+        toast.error(response?.error || 'Invalid password')
+      }
     } catch (err) {
-      toast.error('Invalid password')
+      console.error('Unlock error:', err)
       setPassword('')
+      toast.error('Failed to unlock vault: ' + err.message)
     }
   }
 

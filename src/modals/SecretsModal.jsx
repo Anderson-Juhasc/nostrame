@@ -2,7 +2,6 @@ import browser from 'webextension-polyfill'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import Modal from './Modal'
-import { decrypt } from '../common'
 
 const SecretsModal = ({ isOpen, onClose }) => {
   const [showModal, setShowModal] = useState(isOpen)
@@ -26,15 +25,20 @@ const SecretsModal = ({ isOpen, onClose }) => {
   const decryptVault = async (e) => {
     e.preventDefault()
 
-    try {
-      const storage = await browser.storage.local.get(['encryptedVault'])
-      const decryptedVault = decrypt(storage.encryptedVault, password)
+    // Verify password via background
+    const response = await browser.runtime.sendMessage({
+      type: 'DECRYPT_VAULT_WITH_PASSWORD',
+      password
+    })
+
+    // Clear password immediately
+    setPassword('')
+
+    if (response.success) {
       setIsDecrypted(true)
-      setPassword('')
-      setVault(decryptedVault)
-    } catch (err) {
-      toast.error('Invalid password')
-      setPassword('')
+      setVault(response.vaultData)
+    } else {
+      toast.error(response.error || 'Invalid password')
     }
   }
 

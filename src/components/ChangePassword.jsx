@@ -1,8 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
-import { encrypt, decrypt, setSessionPassword } from '../common'
-import { persistEncryptedCaches } from '../services/cache'
 import ConfirmModal from '../modals/ConfirmModal'
 
 const ChangePassword = ({ fetchData }) => {
@@ -40,32 +38,28 @@ const ChangePassword = ({ fetchData }) => {
   }
 
   const handleConfirmChange = async () => {
-    const storage = await browser.storage.local.get(['encryptedVault'])
-    try {
-      const decryptedVault = decrypt(storage.encryptedVault, changePassword.currentPassword)
-      const encryptedVault = encrypt(decryptedVault, changePassword.newPassword)
-      await setSessionPassword(changePassword.newPassword)
+    // Change password via background (key stays in background memory)
+    const response = await browser.runtime.sendMessage({
+      type: 'CHANGE_PASSWORD',
+      oldPassword: changePassword.currentPassword,
+      newPassword: changePassword.newPassword
+    })
+
+    // Clear form immediately
+    setChangePassword({
+      currentPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
+    })
+
+    if (response.success) {
       await browser.storage.local.set({
-        encryptedVault,
-      })
-
-      // Re-encrypt caches with new password
-      await persistEncryptedCaches(changePassword.newPassword)
-
-      setChangePassword({
-        currentPassword: '',
-        newPassword: '',
-        confirmNewPassword: '',
+        encryptedVault: response.encryptedVault,
       })
       fetchData()
       toast.success("Your password was changed successfully")
-    } catch (e) {
-      toast.error("Current password is incorrect")
-      setChangePassword({
-        currentPassword: '',
-        newPassword: '',
-        confirmNewPassword: '',
-      })
+    } else {
+      toast.error(response.error || "Current password is incorrect")
     }
   }
 

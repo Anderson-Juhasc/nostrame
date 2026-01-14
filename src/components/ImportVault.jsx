@@ -1,7 +1,6 @@
 import browser from 'webextension-polyfill'
 import React, { useState } from 'react'
 import { toast } from 'react-toastify'
-import { decrypt, setSessionPassword, setSessionVault, getSessionPassword, getSessionVault } from '../common'
 
 const ImportVault = ({ fetchData }) => {
   const [file, setFile] = useState(null)
@@ -21,34 +20,29 @@ const ImportVault = ({ fetchData }) => {
       const reader = new FileReader()
       reader.onload = async () => {
         const encryptedVault = (JSON.parse(reader.result)).vault
-        try {
-          const vaultData = decrypt(encryptedVault, password)
 
-          // Set session data
-          await setSessionPassword(password)
-          await setSessionVault(vaultData)
+        // Import vault via background (key stays in background memory)
+        const response = await browser.runtime.sendMessage({
+          type: 'IMPORT_VAULT_BACKUP',
+          encryptedVault,
+          password
+        })
 
-          // Verify session data was actually stored
-          const storedPassword = await getSessionPassword()
-          const storedVault = await getSessionVault()
+        // Clear password immediately
+        setPassword('')
 
-          if (!storedPassword || !storedVault) {
-            toast.error('Failed to store session data. Please try again or check browser permissions.')
-            return
-          }
-
+        if (response.success) {
           await browser.storage.local.set({
-            encryptedVault,
+            encryptedVault: response.encryptedVault,
             isAuthenticated: true,
             isLocked: false,
           })
-          setPassword('')
           setFile(null)
           setFileName('')
           toast.success('Vault imported successfully')
           fetchData()
-        } catch (e) {
-          toast.error('Invalid vault file or wrong password')
+        } else {
+          toast.error(response.error || 'Invalid vault file or wrong password')
         }
       }
       reader.readAsText(file)

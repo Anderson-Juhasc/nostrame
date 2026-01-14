@@ -5,13 +5,8 @@ import * as nip19 from 'nostr-tools/nip19'
 
 import {
   PERMISSION_NAMES,
-  hasSessionPassword,
-  decrypt,
-  setSessionPassword,
-  setSessionVault,
   getSessionVault
 } from './common'
-import { restoreEncryptedCaches } from './services/cache'
 import {getPublicKey} from 'nostr-tools/pure'
 
 function shortenPubkey(pubkey) {
@@ -62,12 +57,13 @@ function Prompt() {
       return
     }
 
-    const hasPassword = await hasSessionPassword()
-    setIsLocked(!hasPassword)
+    // Check if vault is unlocked (key is in background memory)
+    const { unlocked } = await browser.runtime.sendMessage({ type: 'GET_LOCK_STATUS' })
+    setIsLocked(!unlocked)
     setIsLoading(false)
 
     // If already unlocked, fetch the current pubkey
-    if (hasPassword) {
+    if (unlocked) {
       await fetchCurrentPubkey()
     }
   }
@@ -88,43 +84,37 @@ function Prompt() {
     e.preventDefault()
     setError('')
 
-    try {
-      const storage = await browser.storage.local.get(['encryptedVault'])
-      const vaultData = decrypt(storage.encryptedVault, password)
+    // Send unlock request to background (key stays in background memory)
+    const response = await browser.runtime.sendMessage({
+      type: 'UNLOCK_VAULT',
+      password: password
+    })
 
-      await setSessionPassword(password)
-      await setSessionVault(vaultData)
-      await browser.storage.local.set({ isLocked: false })
+    // Clear password from UI memory immediately
+    setPassword('')
 
-      // Restore encrypted caches from local storage
-      await restoreEncryptedCaches(password)
-
-      // Get the pubkey from the unlocked vault
-      if (vaultData?.accountDefault) {
-        const pk = getPublicKey(vaultData.accountDefault)
-        setCurrentPubkey(pk)
-      }
-
-      setPassword('')
-
-      // If permission was already granted, auto-approve after unlock
-      if (unlockOnly) {
-        browser.runtime.sendMessage({
-          prompt: true,
-          id,
-          host,
-          type,
-          accept: true,
-          conditions: null  // Don't update permission, it's already set
-        })
-        return
-      }
-
-      setIsLocked(false)
-    } catch (err) {
-      setError('Invalid password')
-      setPassword('')
+    if (!response.success) {
+      setError(response.error || 'Invalid password')
+      return
     }
+
+    // Get the pubkey from the unlocked vault (now in session storage)
+    await fetchCurrentPubkey()
+
+    // If permission was already granted, auto-approve after unlock
+    if (unlockOnly) {
+      browser.runtime.sendMessage({
+        prompt: true,
+        id,
+        host,
+        type,
+        accept: true,
+        conditions: null  // Don't update permission, it's already set
+      })
+      return
+    }
+
+    setIsLocked(false)
   }
 
   if (isLoading) {

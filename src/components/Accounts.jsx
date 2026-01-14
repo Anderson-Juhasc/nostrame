@@ -6,8 +6,8 @@ import hideStringMiddle from '../helpers/hideStringMiddle'
 import ImportAccountModal from '../modals/ImportAccountModal'
 import DeriveAccountModal from '../modals/DeriveAccountModal'
 import MainContext from '../contexts/MainContext'
-import { clearSessionPassword, clearSessionVault, getSessionVault, setSessionVault, encrypt, getSessionPassword } from '../common'
-import { persistEncryptedCaches, clearAllCaches } from '../services/cache'
+import { clearSessionVault, getSessionVault, setSessionVault } from '../common'
+import { clearAllCaches } from '../services/cache'
 
 const Accounts = () => {
   const { accounts, defaultAccount, updateDefaultAccount } = useContext(MainContext)
@@ -55,10 +55,14 @@ const Accounts = () => {
 
     vault.accountDefault = prvKey
 
-    const password = await getSessionPassword()
-    if (password) {
-      const encryptedVault = encrypt(vault, password)
-      await browser.storage.local.set({ encryptedVault })
+    // Encrypt via background (key stays in background memory)
+    const response = await browser.runtime.sendMessage({
+      type: 'ENCRYPT_VAULT',
+      data: vault
+    })
+
+    if (response.success) {
+      await browser.storage.local.set({ encryptedVault: response.encryptedData })
     }
 
     await setSessionVault(vault)
@@ -80,16 +84,8 @@ const Accounts = () => {
   }
 
   const lockVault = async () => {
-    // Persist encrypted caches before clearing session
-    const password = await getSessionPassword()
-    if (password) {
-      await persistEncryptedCaches(password)
-    }
-
-    await clearSessionPassword()
-    await clearSessionVault()
-    await browser.storage.local.set({ isLocked: true })
-    await clearAllCaches()
+    // Send lock request to background (clears key from memory)
+    await browser.runtime.sendMessage({ type: 'LOCK_VAULT' })
   }
 
   return (

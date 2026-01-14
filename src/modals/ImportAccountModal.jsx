@@ -7,7 +7,7 @@ import * as nip49 from 'nostr-tools/nip49'
 import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { getPublicKey, finalizeEvent } from 'nostr-tools/pure'
-import { encrypt, getSessionPassword, getSessionVault, setSessionVault } from '../common'
+import { getSessionVault, setSessionVault } from '../common'
 import Modal from './Modal'
 import MainContext from '../contexts/MainContext'
 import { ensureRelayListExists } from '../helpers/outbox'
@@ -45,13 +45,38 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
     setIsMnemonic(validateWords(value))
   }
 
+  // Helper to save vault via background encryption
+  const saveVaultWithKey = async (vault, prvKeyHex, prvKeyBytes) => {
+    const response = await browser.runtime.sendMessage({
+      type: 'ENCRYPT_VAULT',
+      data: vault
+    })
+
+    if (!response.success) {
+      toast.error('Failed to save vault. Please unlock again.')
+      return false
+    }
+
+    await browser.storage.local.set({ encryptedVault: response.encryptedData })
+    await setSessionVault(vault)
+    await updateAccounts()
+
+    // Publish default relay list if account doesn't have one
+    const pubkey = getPublicKey(prvKeyBytes || hexToBytes(prvKeyHex))
+    ensureRelayListExists(pubkey, prvKeyBytes || hexToBytes(prvKeyHex), finalizeEvent)
+
+    toast.success('Account imported successfully')
+    callBack()
+    navigate('/vault')
+    return true
+  }
+
   const importAccount = async (e) => {
     e.preventDefault()
 
     const vault = await getSessionVault()
-    const password = await getSessionPassword()
 
-    if (!password || !vault) {
+    if (!vault) {
       toast.error('Session expired. Please unlock your vault again.')
       return
     }
@@ -77,18 +102,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         vault.importedAccounts.push({ prvKey: prvKeyHex })
         vault.accountDefault = prvKeyHex
-        const encryptedVault = encrypt(vault, password)
-        await browser.storage.local.set({ encryptedVault })
-        await setSessionVault(vault)
-        await updateAccounts()
-
-        // Publish default relay list if account doesn't have one
-        const pubkey = getPublicKey(hexToBytes(prvKeyHex))
-        ensureRelayListExists(pubkey, hexToBytes(prvKeyHex), finalizeEvent)
-
-        toast.success('Account imported successfully')
-        callBack()
-        navigate('/vault')
+        await saveVaultWithKey(vault, prvKeyHex, prvKeyBytes)
       } catch (err) {
         toast.error('Invalid ncryptsec or wrong password')
         setNcryptsecPassword('')
@@ -108,19 +122,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
           }
           vault.importedAccounts.push({ prvKey: prvKeyHex })
           vault.accountDefault = prvKeyHex
-          const encryptedVault = encrypt(vault, password)
-          await browser.storage.local.set({ encryptedVault })
-          await setSessionVault(vault)
-          await updateAccounts()
-
-          // Publish default relay list if account doesn't have one
-          const pubkey = getPublicKey(hexToBytes(prvKeyHex))
-          ensureRelayListExists(pubkey, hexToBytes(prvKeyHex), finalizeEvent)
-
-          toast.success('Account imported successfully')
-          callBack()
-
-          navigate('/vault')
+          await saveVaultWithKey(vault, prvKeyHex, data)
         }
       } catch (e) {
         toast.error('Invalid private key format')
@@ -143,19 +145,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         vault.importedAccounts.push({ prvKey: prvKeyHex })
         vault.accountDefault = prvKeyHex
-        const encryptedVault = encrypt(vault, password)
-        await browser.storage.local.set({ encryptedVault })
-        await setSessionVault(vault)
-        await updateAccounts()
-
-        // Publish default relay list if account doesn't have one
-        const pubkey = getPublicKey(prvKeyBytes)
-        ensureRelayListExists(pubkey, prvKeyBytes, finalizeEvent)
-
-        toast.success('Account imported successfully')
-        callBack()
-
-        navigate('/vault')
+        await saveVaultWithKey(vault, prvKeyHex, prvKeyBytes)
       } catch (e) {
         toast.error('Invalid mnemonic phrase')
         setPrvKey('')
@@ -177,19 +167,7 @@ const ImportAccountModal = ({ isOpen, onClose, callBack }) => {
 
         vault.importedAccounts.push({ prvKey: prvKeyHex })
         vault.accountDefault = prvKeyHex
-        const encryptedVault = encrypt(vault, password)
-        await browser.storage.local.set({ encryptedVault })
-        await setSessionVault(vault)
-        await updateAccounts()
-
-        // Publish default relay list if account doesn't have one
-        const pubkey = getPublicKey(prvKeyBytes)
-        ensureRelayListExists(pubkey, prvKeyBytes, finalizeEvent)
-
-        toast.success('Account imported successfully')
-        callBack()
-
-        navigate('/vault')
+        await saveVaultWithKey(vault, prvKeyHex, prvKeyBytes)
       } catch (e) {
         toast.error('Invalid private key format')
         setPrvKey('')

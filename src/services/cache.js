@@ -25,7 +25,7 @@
  */
 
 import browser from 'webextension-polyfill'
-import { encrypt, decrypt } from '../common'
+import { encryptWithKey, decryptWithKey, isLegacyFormat } from '../crypto'
 
 // Cache durations in milliseconds
 export const CACHE_DURATIONS = {
@@ -640,13 +640,14 @@ export async function recordProfileRefresh(pubkey) {
 }
 
 /**
- * Encrypt and persist caches to local storage
- * Call this before locking the vault to preserve cache data
- * @param {string} password - The vault password for encryption
+ * Encrypt and persist caches to local storage using pre-derived key
+ * Called from background service worker before locking the vault
+ * @param {CryptoKey} key - The vault encryption key (from memory)
+ * @param {Uint8Array} salt - The vault salt (from memory)
  */
-export async function persistEncryptedCaches(password) {
-  if (!password) {
-    console.error('Cannot persist caches: no password provided')
+export async function persistEncryptedCachesWithKey(key, salt) {
+  if (!key || !salt) {
+    console.error('Cannot persist caches: no key provided')
     return
   }
 
@@ -679,7 +680,7 @@ export async function persistEncryptedCaches(password) {
     }
 
     // Encrypt and store in local storage
-    const encryptedCache = encrypt(cacheData, password)
+    const encryptedCache = await encryptWithKey(cacheData, key, salt)
     await browser.storage.local.set({ [KEYS.ENCRYPTED_CACHE]: encryptedCache })
     console.log('Caches encrypted and persisted to local storage')
   } catch (e) {
@@ -689,13 +690,13 @@ export async function persistEncryptedCaches(password) {
 
 /**
  * Restore encrypted caches from local storage to session storage
- * Call this after unlocking the vault
- * @param {string} password - The vault password for decryption
+ * Called from background service worker after unlocking the vault
+ * @param {CryptoKey} key - The vault encryption key (from memory)
  * @returns {Promise<boolean>} - True if caches were restored successfully
  */
-export async function restoreEncryptedCaches(password) {
-  if (!password) {
-    console.error('Cannot restore caches: no password provided')
+export async function restoreEncryptedCachesWithKey(key) {
+  if (!key) {
+    console.error('Cannot restore caches: no key provided')
     return false
   }
 
@@ -711,8 +712,15 @@ export async function restoreEncryptedCaches(password) {
       return false
     }
 
-    // Decrypt the cache data
-    const cacheData = decrypt(encryptedCache, password)
+    // Skip legacy format caches - they'll be re-encrypted on next lock
+    if (isLegacyFormat(encryptedCache)) {
+      console.log('Legacy cache format detected, discarding')
+      await browser.storage.local.remove(KEYS.ENCRYPTED_CACHE)
+      return false
+    }
+
+    // Decrypt the cache data using key
+    const cacheData = await decryptWithKey(encryptedCache, key)
 
     // Validate cache version
     if (cacheData.version !== CACHE_VERSION) {
