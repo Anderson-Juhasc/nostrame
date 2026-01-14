@@ -1,3 +1,4 @@
+dist/assets/css/
 node_modules
 *.build.js
 *.zip
