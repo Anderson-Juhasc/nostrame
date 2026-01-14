@@ -35,7 +35,7 @@ const ImportVault = ({ fetchData }) => {
           await browser.storage.local.set({
             encryptedVault: response.encryptedVault,
             isAuthenticated: true,
-            isLocked: false,
+            uiHintLocked: false,
           })
           setFile(null)
           setFileName('')

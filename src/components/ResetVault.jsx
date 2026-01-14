@@ -18,7 +18,7 @@ const ResetVault = ({ fetchData }) => {
     await browser.storage.local.set({
       encryptedVault: '',
       isAuthenticated: false,
-      isLocked: false,
+      uiHintLocked: false,
     })
     fetchData()
   }

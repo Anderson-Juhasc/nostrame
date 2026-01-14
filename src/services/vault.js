@@ -117,7 +117,7 @@ export async function unlockVault(password) {
 
     // Store decrypted vault in session storage (for UI access)
     await setSessionVault(vaultData)
-    await browser.storage.local.set({ isLocked: false })
+    await browser.storage.local.set({ uiHintLocked: false })
 
     // Restore encrypted caches from local storage
     await restoreEncryptedCachesWithKey(vaultKey).catch(err => {
@@ -163,8 +163,8 @@ export async function lockVault() {
   // Clear session storage
   await clearSessionVault()
 
-  // Update storage flags
-  await browser.storage.local.set({ isLocked: true })
+  // Update storage flags (UX hint only, not authoritative)
+  await browser.storage.local.set({ uiHintLocked: true })
 
   // Clear any other in-memory caches
   clearProfileCaches()

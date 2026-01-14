@@ -289,7 +289,7 @@ export const MainProvider = ({ children }) => {
 
       if (!mountedRef.current) return
 
-      if (!storage.isAuthenticated || storage.isLocked || !vault) {
+      if (!storage.isAuthenticated || storage.uiHintLocked || !vault) {
         setLoading(false)
         return
       }
@@ -329,7 +329,7 @@ export const MainProvider = ({ children }) => {
     fetchData()
 
     const handleStorageChange = (changes) => {
-      if (changes.isAuthenticated || changes.isLocked) {
+      if (changes.isAuthenticated || changes.uiHintLocked) {
         fetchData()
       }
     }

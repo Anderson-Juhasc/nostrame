@@ -20,8 +20,8 @@ function Options() {
   const [password, setPassword] = useState('')
 
   const fetchData = useCallback(async () => {
-    const storage = await browser.storage.local.get(['isAuthenticated', 'isLocked'])
-    setIsLocked(storage.isLocked || false)
+    const storage = await browser.storage.local.get(['isAuthenticated', 'uiHintLocked'])
+    setIsLocked(storage.uiHintLocked || false)
     setIsAuthenticated(storage.isAuthenticated || false)
   }, [])
 

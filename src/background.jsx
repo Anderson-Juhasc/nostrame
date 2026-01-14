@@ -36,32 +36,150 @@ let secretsCache = new LRUCache(100)
 let lastUsedAccount = null
 
 // ============================================================================
-// IN-MEMORY STATE - All sensitive data lives here ONLY
-// Keys and decrypted vault are wiped when service worker terminates
-// This is the security boundary - secrets NEVER leave this scope
-// sessionStorage contains NO secrets
+// SECURITY INVARIANTS
 // ============================================================================
-let vaultKey = null        // CryptoKey - non-extractable AES-GCM key
-let decryptedVault = null  // Decrypted vault data (accounts, settings, etc.)
+//
+// INV-1: vaultKey in memory is the SINGLE SOURCE OF CRYPTOGRAPHIC TRUTH.
+//        If vaultKey === null, the vault is LOCKED, regardless of any storage flags.
+//
+// INV-2: UX state ≠ Cryptographic state.
+//        Storage flags (uiHintLocked) are HINTS for UI rendering only.
+//        They may be stale after service worker restart.
+//
+// INV-3: Service worker termination = Automatic lock.
+//        All in-memory secrets are garbage collected. No mechanism can prevent this.
+//        Keep-alive is BEST-EFFORT only.
+//
+// INV-4: Private keys NEVER leave background memory.
+//        UI receives only pubkeys, signed results, or encrypted blobs.
+//
+// INV-5: sessionStorage contains NO secrets.
+//        All decrypted data lives in background memory only.
+//
+// ============================================================================
+// IN-MEMORY STATE - PARTITIONED FOR SECURITY
+// ============================================================================
+//
+// We partition in-memory vault data into two categories:
+//
+// 1. PRIVATE MATERIAL (High sensitivity)
+//    - Private keys, seed phrases, signing material
+//    - Wiped AGGRESSIVELY on lock, error, or any security event
+//    - NEVER serialized or sent to UI
+//
+// 2. PUBLIC METADATA (Low sensitivity)
+//    - Account names, relay lists, settings
+//    - May be cached slightly longer but still memory-only
+//    - Can be sent to UI for display
+//
+// ============================================================================
+
+// CRYPTOGRAPHIC KEY - The single source of unlock truth
+let vaultKey = null  // CryptoKey - non-extractable AES-GCM key
+
+// PRIVATE MATERIAL - High sensitivity, wiped aggressively
+// Contains: private keys, mnemonic, accountDefault (which is a prvKey)
+let privateMaterial = null
+
+// PUBLIC METADATA - Lower sensitivity, still memory-only
+// Contains: account indices, settings, relay lists, profile names
+let publicMetadata = null
 
 // Note: vaultSalt is NOT stored here. It's extracted from the encrypted blob
 // when needed for re-encryption. This minimizes exposure of crypto metadata.
 
 /**
  * Check if the vault is unlocked (key is in memory)
- * This is the SOLE authoritative source for unlock state.
- * Storage flags (isLocked) are hints only.
+ *
+ * THIS IS THE SOLE AUTHORITATIVE SOURCE FOR UNLOCK STATE.
+ *
+ * Storage flags (uiHintLocked) are UX hints only and may be stale
+ * after service worker restart. Always use this function or
+ * GET_VAULT_STATUS message to check actual unlock state.
  */
 function isVaultUnlocked() {
   return vaultKey !== null
 }
 
 /**
- * Clear all in-memory sensitive data (called on lock or service worker termination)
+ * Clear all in-memory sensitive data
+ *
+ * Called on:
+ * - Explicit lock (user clicks lock)
+ * - Auto-lock timeout
+ * - Any security-sensitive error
+ * - Service worker termination (automatic via GC)
+ *
+ * SECURITY: privateMaterial is wiped FIRST as it's highest sensitivity
  */
 function clearInMemorySecrets() {
+  // Clear private material FIRST (highest sensitivity)
+  if (privateMaterial) {
+    // Attempt to overwrite sensitive fields before nulling
+    // (defense in depth - helps with memory inspection attacks)
+    if (privateMaterial.accounts) {
+      privateMaterial.accounts.forEach(acc => {
+        if (acc.prvKey) acc.prvKey = null
+      })
+    }
+    if (privateMaterial.importedAccounts) {
+      privateMaterial.importedAccounts.forEach(acc => {
+        if (acc.prvKey) acc.prvKey = null
+      })
+    }
+    privateMaterial.mnemonic = null
+    privateMaterial.accountDefault = null
+  }
+  privateMaterial = null
+
+  // Clear public metadata (lower sensitivity but still memory-only)
+  publicMetadata = null
+
+  // Clear the cryptographic key last
   vaultKey = null
-  decryptedVault = null
+}
+
+/**
+ * Store decrypted vault data in partitioned memory
+ * Separates private material from public metadata
+ */
+function storeDecryptedVault(vaultData) {
+  // Extract PRIVATE MATERIAL (high sensitivity)
+  privateMaterial = {
+    accounts: vaultData.accounts || [],           // Array of {prvKey}
+    importedAccounts: vaultData.importedAccounts || [], // Array of {prvKey}
+    mnemonic: vaultData.mnemonic,                 // BIP39 mnemonic (if stored)
+    accountDefault: vaultData.accountDefault      // Currently selected prvKey
+  }
+
+  // Extract PUBLIC METADATA (lower sensitivity)
+  publicMetadata = {
+    // Account count and types (no private keys)
+    accountCount: (vaultData.accounts?.length || 0),
+    importedAccountCount: (vaultData.importedAccounts?.length || 0),
+    // Any other non-sensitive settings can go here
+  }
+}
+
+/**
+ * Reconstruct full vault from partitioned memory
+ * Used when vault needs to be re-encrypted
+ */
+function getFullVaultFromMemory() {
+  if (!privateMaterial) return null
+
+  return {
+    accounts: privateMaterial.accounts,
+    importedAccounts: privateMaterial.importedAccounts,
+    mnemonic: privateMaterial.mnemonic,
+    accountDefault: privateMaterial.accountDefault
+  }
+}
+
+// Legacy accessor for backward compatibility
+// TODO: Migrate all code to use partitioned access
+function getDecryptedVault() {
+  return getFullVaultFromMemory()
 }
 
 // Auto-lock timeout (default 5 minutes in milliseconds, converted to minutes for alarms API)
@@ -69,9 +187,27 @@ const DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000
 const LOCK_ALARM_NAME = 'autoLockAlarm'
 
 // ============================================================================
-// KEEP-ALIVE MECHANISM
-// Prevents Chrome from terminating the service worker while vault is unlocked.
-// This maintains Bitwarden-like session persistence.
+// KEEP-ALIVE MECHANISM - BEST EFFORT ONLY
+// ============================================================================
+//
+// IMPORTANT: Keep-alive is a UX OPTIMIZATION, not a security guarantee.
+//
+// How it works:
+// - A periodic alarm fires every ~24 seconds while vault is unlocked
+// - This prevents Chrome from terminating the idle service worker
+// - If successful, user doesn't need to re-enter password frequently
+//
+// CRITICAL LIMITATIONS:
+// - Chrome may STILL terminate the worker at any time (memory pressure, updates, etc.)
+// - Keep-alive alarms may fail to fire (browser bugs, system sleep, etc.)
+// - There is NO mechanism that can guarantee the worker stays alive
+//
+// SECURITY IMPLICATIONS:
+// - Service worker termination at ANY TIME must be treated as vault lock
+// - UI must ALWAYS call GET_VAULT_STATUS on focus/reload to verify state
+// - UI must NEVER assume the vault is unlocked based on previous state
+// - Storage flags (uiHintLocked) may be stale after unexpected termination
+//
 // ============================================================================
 const KEEPALIVE_ALARM_NAME = 'keepAliveAlarm'
 const KEEPALIVE_INTERVAL_MINUTES = 0.4  // ~24 seconds (under Chrome's 30s idle limit)
@@ -80,9 +216,9 @@ const KEEPALIVE_INTERVAL_MINUTES = 0.4  // ~24 seconds (under Chrome's 30s idle 
  * Start the keep-alive alarm to prevent service worker termination.
  * Called when vault is unlocked.
  *
- * SECURITY NOTE: This does NOT store any sensitive data.
- * It simply keeps the service worker process alive so that
- * the in-memory vaultKey is not garbage collected.
+ * BEST EFFORT ONLY - This is a UX optimization, not a security guarantee.
+ * The service worker may still be terminated by Chrome at any time.
+ * All security logic must assume termination can happen unexpectedly.
  */
 function startKeepAlive() {
   chrome.alarms.create(KEEPALIVE_ALARM_NAME, {
@@ -93,7 +229,8 @@ function startKeepAlive() {
 /**
  * Stop the keep-alive alarm.
  * Called when vault is locked (explicit or auto-lock).
- * Once stopped, the service worker can terminate normally.
+ * Once stopped, the service worker can terminate normally,
+ * which will garbage collect all in-memory secrets.
  */
 function stopKeepAlive() {
   chrome.alarms.clear(KEEPALIVE_ALARM_NAME)
@@ -118,11 +255,16 @@ async function lockVault() {
     })
   }
 
-  // CRITICAL: Clear ALL in-memory secrets (key AND decrypted vault)
+  // CRITICAL: Clear ALL in-memory secrets
+  // Order matters: privateMaterial first, then publicMetadata, then vaultKey
   clearInMemorySecrets()
 
-  // Update storage flag (hint only - not authoritative)
-  await browser.storage.local.set({ isLocked: true })
+  // Update UX hint flag
+  // NOTE: This is a UI HINT ONLY, not a security flag.
+  // The authoritative lock state is vaultKey === null.
+  // This flag may be stale after service worker restart.
+  await browser.storage.local.set({ uiHintLocked: true })
+
   clearAllCaches()
 }
 
@@ -133,9 +275,12 @@ async function resetLockTimer() {
   // Don't start timer if UI is actively open (popup or options page)
   if (activeConnections.size > 0) return
 
-  // Check if vault is unlocked before setting timer
-  const { isLocked, isAuthenticated } = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
-  if (!isAuthenticated || isLocked) return
+  // Check if vault is unlocked using AUTHORITATIVE source (in-memory key)
+  // Storage flags are hints only and may be stale
+  if (!isVaultUnlocked()) return
+
+  const { isAuthenticated } = await browser.storage.local.get(['isAuthenticated'])
+  if (!isAuthenticated) return
 
   // Get timeout setting (default 5 minutes)
   const { autoLockTimeout = DEFAULT_LOCK_TIMEOUT } = await browser.storage.local.get(['autoLockTimeout'])
@@ -206,14 +351,17 @@ function getSharedSecret(sk, peer) {
 }
 
 /**
- * Get the current active account's private key from in-memory vault
+ * Get the current active account's private key from in-memory PRIVATE MATERIAL
  * Returns null if vault is locked or no default account set
+ *
+ * SECURITY: This accesses privateMaterial which contains sensitive keys.
+ * The returned value must NEVER be sent to UI or stored outside this worker.
  */
 function getCurrentAccount() {
-  if (!decryptedVault || !decryptedVault.accountDefault) {
+  if (!privateMaterial || !privateMaterial.accountDefault) {
     return null
   }
-  return decryptedVault.accountDefault
+  return privateMaterial.accountDefault
 }
 
 const width = 400
@@ -253,9 +401,10 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       const { encryptedVault, isAuthenticated } = await browser.storage.local.get(['encryptedVault', 'isAuthenticated'])
       const unlocked = isVaultUnlocked()
 
-      // Sync storage flag if desync detected (worker restarted)
+      // Sync storage hint flag if desync detected (worker restarted)
+      // NOTE: uiHintLocked is a UX hint ONLY, not authoritative state
       if (isAuthenticated && !unlocked) {
-        await browser.storage.local.set({ isLocked: true })
+        await browser.storage.local.set({ uiHintLocked: true })
       }
 
       return {
@@ -282,10 +431,10 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       // Returns full vault from memory (replaces getSessionVault())
       // SECURITY: Vault is in memory only, NOT in session storage
       // This is for UI components that need to modify vault structure
-      if (!isVaultUnlocked() || !decryptedVault) {
+      if (!isVaultUnlocked() || !privateMaterial) {
         return null
       }
-      return decryptedVault
+      return getFullVaultFromMemory()
     case 'SET_SESSION_VAULT':
       // Updates vault in memory and encrypts to storage (replaces setSessionVault())
       // SECURITY: Vault is stored in memory only, NOT in session storage
@@ -307,6 +456,12 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
     // Legacy alias - TODO: remove after migration
     case 'DECRYPT_VAULT_WITH_PASSWORD':
       return handleDecryptVaultWithPassword(message.password)
+
+    // ========================================================================
+    // HIGH-SENSITIVITY SECRET EXPORT (Requires password re-verification)
+    // ========================================================================
+    case 'REQUEST_SECRET_FOR_DISPLAY':
+      return handleRequestSecretForDisplay(message.password, message.secretType, message.accountIndex)
   }
 
   if (message.openSignUp) {
@@ -372,11 +527,11 @@ async function handleUnlockVault(password) {
       vaultData = await decryptWithKey(encryptedVault, vaultKey)
     }
 
-    // Store decrypted vault in MEMORY ONLY (not session storage!)
-    decryptedVault = vaultData
+    // Store decrypted vault in partitioned MEMORY ONLY (not session storage!)
+    storeDecryptedVault(vaultData)
 
-    // Update storage flag (hint only - not authoritative)
-    await browser.storage.local.set({ isLocked: false })
+    // Update storage hint flag (UX hint only - not authoritative)
+    await browser.storage.local.set({ uiHintLocked: false })
 
     // Restore encrypted caches from local storage
     await restoreEncryptedCachesWithKey(vaultKey).catch(err => {
@@ -417,8 +572,8 @@ async function handleEncryptVault(data) {
     const salt = extractSaltFromBlob(encryptedVault)
     const encryptedData = await encryptWithKey(data, vaultKey, salt)
 
-    // Also update in-memory vault
-    decryptedVault = data
+    // Also update in-memory vault (partitioned)
+    storeDecryptedVault(data)
 
     return { success: true, encryptedData }
   } catch (err) {
@@ -445,8 +600,8 @@ async function handleCreateNewVault(password, vaultData) {
     const encryptedVault = await encryptWithKey(vaultData, vaultKey, salt)
     // salt goes out of scope here
 
-    // Store decrypted vault in MEMORY ONLY
-    decryptedVault = vaultData
+    // Store decrypted vault in partitioned MEMORY ONLY
+    storeDecryptedVault(vaultData)
 
     // Start keep-alive
     startKeepAlive()
@@ -496,8 +651,8 @@ async function handleChangePassword(oldPassword, newPassword) {
     await persistEncryptedCachesWithKey(vaultKey, salt).catch(() => {})
     // salt goes out of scope here
 
-    // Update in-memory vault
-    decryptedVault = vaultData
+    // Update in-memory vault (partitioned)
+    storeDecryptedVault(vaultData)
 
     return { success: true, encryptedVault: newEncryptedVault }
   } catch (err) {
@@ -547,8 +702,8 @@ async function handleImportVaultBackup(encryptedVault, password) {
       vaultData = await decryptWithKey(encryptedVault, vaultKey)
     }
 
-    // Store decrypted vault in MEMORY ONLY
-    decryptedVault = vaultData
+    // Store decrypted vault in partitioned MEMORY ONLY
+    storeDecryptedVault(vaultData)
 
     // Start keep-alive
     startKeepAlive()
@@ -603,6 +758,95 @@ async function handleDecryptVaultWithPassword(password) {
 }
 
 /**
+ * Handle request for secret display - REQUIRES password re-verification
+ *
+ * SECURITY: This is a HIGH-SENSITIVITY operation.
+ * - Requires password re-entry even if vault is unlocked
+ * - Only returns ONE secret at a time
+ * - Used for explicit "show private key" or "show mnemonic" UI actions
+ *
+ * @param {string} password - Password for verification
+ * @param {string} secretType - Type of secret: 'privateKey' or 'mnemonic'
+ * @param {number} accountIndex - For privateKey, index of account (derived accounts) or null for current
+ * @returns {Promise<{success: boolean, secret?: string, error?: string}>}
+ */
+async function handleRequestSecretForDisplay(password, secretType, accountIndex) {
+  // Step 1: Verify password (always required, even if unlocked)
+  try {
+    const { encryptedVault } = await browser.storage.local.get(['encryptedVault'])
+    if (!encryptedVault) {
+      return { success: false, error: 'No vault found' }
+    }
+
+    // Verify password by attempting decryption
+    let vaultData
+    if (isLegacyFormat(encryptedVault)) {
+      vaultData = await decryptLegacy(encryptedVault, password)
+    } else {
+      const { key } = await deriveKeyFromEncryptedVault(password, encryptedVault)
+      vaultData = await decryptWithKey(encryptedVault, key)
+    }
+
+    // Step 2: Extract the requested secret
+    switch (secretType) {
+      case 'mnemonic': {
+        // Return the BIP39 mnemonic (seed phrase)
+        if (!vaultData.mnemonic) {
+          return { success: false, error: 'No mnemonic found in vault' }
+        }
+        return { success: true, secret: vaultData.mnemonic }
+      }
+      case 'privateKey': {
+        // Return private key for a specific account
+        // If accountIndex is null/undefined, use current default account
+        let prvKey
+
+        if (accountIndex === null || accountIndex === undefined) {
+          // Get current default account's private key
+          prvKey = vaultData.accountDefault
+          if (!prvKey) {
+            return { success: false, error: 'No default account set' }
+          }
+        } else {
+          // Get account at specified index
+          // accountIndex format: "derived:N" or "imported:N" or just N (assumes derived)
+          let type = 'derived'
+          let idx = accountIndex
+
+          if (typeof accountIndex === 'string') {
+            if (accountIndex.startsWith('imported:')) {
+              type = 'imported'
+              idx = parseInt(accountIndex.split(':')[1], 10)
+            } else if (accountIndex.startsWith('derived:')) {
+              idx = parseInt(accountIndex.split(':')[1], 10)
+            } else {
+              idx = parseInt(accountIndex, 10)
+            }
+          }
+
+          const accounts = type === 'imported' ? vaultData.importedAccounts : vaultData.accounts
+          if (!accounts || !accounts[idx]) {
+            return { success: false, error: 'Account not found' }
+          }
+          prvKey = accounts[idx].prvKey
+        }
+
+        if (!prvKey) {
+          return { success: false, error: 'Private key not found' }
+        }
+
+        return { success: true, secret: prvKey }
+      }
+      default:
+        return { success: false, error: `Unknown secret type: ${secretType}` }
+    }
+  } catch (err) {
+    // Password verification failed
+    return { success: false, error: 'Invalid password' }
+  }
+}
+
+/**
  * Handle password verification - checks if password is correct without returning secrets
  * Used for settings operations that require re-authentication
  *
@@ -640,20 +884,20 @@ async function handleVerifyPassword(password) {
  * @returns {Promise<{success: boolean, vault?: object, error?: string}>}
  */
 function handleGetVaultData() {
-  if (!isVaultUnlocked() || !decryptedVault) {
+  if (!isVaultUnlocked() || !privateMaterial) {
     return { success: false, error: 'Vault is locked' }
   }
 
   // Return vault structure without private keys
   // UI can use this to understand account structure
   const safeVault = {
-    accountDefault: decryptedVault.accountDefault,
+    accountDefault: privateMaterial.accountDefault,
     // Return account indices, NOT private keys
-    accounts: (decryptedVault.accounts || []).map((acc, index) => ({
+    accounts: (privateMaterial.accounts || []).map((acc, index) => ({
       index,
       // prvKey is intentionally NOT included
     })),
-    importedAccounts: (decryptedVault.importedAccounts || []).map((acc, index) => ({
+    importedAccounts: (privateMaterial.importedAccounts || []).map((acc, index) => ({
       index,
       // prvKey is intentionally NOT included
     })),
@@ -672,14 +916,14 @@ function handleGetVaultData() {
  * @returns {Promise<{success: boolean, accounts?: array, error?: string}>}
  */
 function handleGetAccountsList() {
-  if (!isVaultUnlocked() || !decryptedVault) {
+  if (!isVaultUnlocked() || !privateMaterial) {
     return { success: false, error: 'Vault is locked' }
   }
 
   const accounts = []
 
   // Process derived accounts
-  const derivedAccounts = decryptedVault.accounts || []
+  const derivedAccounts = privateMaterial.accounts || []
   for (let i = 0; i < derivedAccounts.length; i++) {
     const prvKey = derivedAccounts[i].prvKey
     const pubKey = getPublicKey(prvKey)
@@ -688,12 +932,12 @@ function handleGetAccountsList() {
       type: 'derived',
       pubKey,
       // prvKey is intentionally NOT included
-      isDefault: decryptedVault.accountDefault === prvKey
+      isDefault: privateMaterial.accountDefault === prvKey
     })
   }
 
   // Process imported accounts
-  const importedAccounts = decryptedVault.importedAccounts || []
+  const importedAccounts = privateMaterial.importedAccounts || []
   for (let i = 0; i < importedAccounts.length; i++) {
     const prvKey = importedAccounts[i].prvKey
     const pubKey = getPublicKey(prvKey)
@@ -702,7 +946,7 @@ function handleGetAccountsList() {
       type: 'imported',
       pubKey,
       // prvKey is intentionally NOT included
-      isDefault: decryptedVault.accountDefault === prvKey
+      isDefault: privateMaterial.accountDefault === prvKey
     })
   }
 
@@ -734,8 +978,8 @@ async function handleUpdateVault(newVault) {
     const newEncryptedVault = await encryptWithKey(newVault, vaultKey, salt)
     await browser.storage.local.set({ encryptedVault: newEncryptedVault })
 
-    // Update in-memory vault
-    decryptedVault = newVault
+    // Update in-memory vault (partitioned)
+    storeDecryptedVault(newVault)
 
     return { success: true }
   } catch (err) {
@@ -763,13 +1007,14 @@ browser.windows.onRemoved.addListener(_ => {
 })
 
 browser.storage.onChanged.addListener((changes, area) => {
-  // Handle lock state changes (hint flags in localStorage)
-  if (changes.isLocked?.newValue === true) {
+  // Handle UX hint flag changes (hint flags in localStorage)
+  // NOTE: These are UX hints only, not authoritative lock state
+  if (changes.uiHintLocked?.newValue === true) {
     clearAllCaches()
     chrome.alarms.clear(LOCK_ALARM_NAME)
   }
-  // Reset timer when vault is unlocked
-  if (changes.isLocked?.newValue === false) {
+  // Reset timer when vault is unlocked (UX hint)
+  if (changes.uiHintLocked?.newValue === false) {
     resetLockTimer()
   }
 })
@@ -894,9 +1139,8 @@ async function handleContentScriptMessage({type, params, host}) {
   }
 
   // if we're here this means it was accepted
-  let { isLocked } = await browser.storage.local.get(['isLocked'])
-
-  if (isLocked) {
+  // Check AUTHORITATIVE unlock state (in-memory key), not UX hint flag
+  if (!isVaultUnlocked()) {
     return {error: {message: 'vault is locked, please unlock it first'} }
   }
 
