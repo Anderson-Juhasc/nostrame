@@ -28,63 +28,45 @@ export const DEFAULT_RELAYS = [
 ]
 
 // ============================================================================
-// SESSION STORAGE HELPERS
+// VAULT ACCESS VIA MESSAGES
+// ============================================================================
+//
+// SECURITY ARCHITECTURE:
+// - Decrypted vault is stored ONLY in background service worker memory
+// - UI components access vault data via message passing
+// - Session storage MUST NOT contain decrypted secrets
+//
+// These functions provide the same API as the old session storage functions
+// but route through the background service worker instead.
 // ============================================================================
 
 /**
- * Get the session storage API (chrome.storage.session or browser.storage.session)
- */
-function getSessionStorage() {
-  // Try multiple ways to access Chrome's session storage
-  const chromeSession = globalThis.chrome?.storage?.session ||
-                        (typeof chrome !== 'undefined' && chrome?.storage?.session) ||
-                        (typeof window !== 'undefined' && window.chrome?.storage?.session)
-
-  if (chromeSession) {
-    return chromeSession
-  }
-
-  // Try browser.storage.session (Firefox/polyfill)
-  if (browser?.storage?.session) {
-    return browser.storage.session
-  }
-
-  console.warn('Session storage not available - vault data will not persist between popup opens')
-  return null
-}
-
-/**
- * Store decrypted vault in session storage
- * @param {object} vault - Decrypted vault data
- */
-export async function setSessionVault(vault) {
-  const sessionStorage = getSessionStorage()
-  if (sessionStorage) {
-    await sessionStorage.set({ vault })
-  }
-}
-
-/**
- * Get decrypted vault from session storage
+ * Get vault from background memory (replaces old getSessionVault)
+ * SECURITY: Vault is in background memory only, NOT in session storage
+ *
  * @returns {Promise<object|null>}
  */
 export async function getSessionVault() {
-  const sessionStorage = getSessionStorage()
-  if (sessionStorage) {
-    const result = await sessionStorage.get('vault')
-    return result.vault || null
-  }
-  return null
+  return browser.runtime.sendMessage({ type: 'GET_SESSION_VAULT' })
 }
 
 /**
- * Clear vault from session storage
+ * Update vault in background memory and persist encrypted (replaces old setSessionVault)
+ * SECURITY: Vault is stored in background memory only, NOT in session storage
+ *
+ * @param {object} vault - Vault data to save
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function setSessionVault(vault) {
+  return browser.runtime.sendMessage({ type: 'SET_SESSION_VAULT', vault })
+}
+
+/**
+ * Clear vault from background memory (lock the vault)
+ * @deprecated Use LOCK_VAULT message directly
  */
 export async function clearSessionVault() {
-  const sessionStorage = getSessionStorage()
-  if (sessionStorage) {
-    await sessionStorage.remove('vault')
-  }
+  return browser.runtime.sendMessage({ type: 'LOCK_VAULT' })
 }
 
 // ============================================================================

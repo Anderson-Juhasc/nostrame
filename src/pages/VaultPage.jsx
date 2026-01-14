@@ -8,6 +8,7 @@ import ConfirmModal from '../modals/ConfirmModal'
 import Loading from '../components/Loading'
 import MainContext from '../contexts/MainContext'
 import { removePermissions, getSessionVault, setSessionVault } from '../common'
+// Note: getSessionVault/setSessionVault now route through background memory (not session storage)
 import { removeAccountCache } from '../services/cache'
 
 const VaultPage = () => {

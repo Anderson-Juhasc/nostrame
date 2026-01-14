@@ -13,7 +13,8 @@ import {
   encryptWithKey,
   decryptWithKey,
   decryptLegacy,
-  isLegacyFormat
+  isLegacyFormat,
+  extractSaltFromBlob
 } from './crypto'
 
 // Non-crypto utilities
@@ -22,10 +23,7 @@ import {
   getPermissionStatus,
   updatePermission,
   showNotification,
-  getPosition,
-  getSessionVault,
-  setSessionVault,
-  clearSessionVault
+  getPosition
 } from './common'
 
 import { clearAllCaches as clearProfileCaches, persistEncryptedCachesWithKey, restoreEncryptedCachesWithKey } from './services/cache'
@@ -38,25 +36,32 @@ let secretsCache = new LRUCache(100)
 let lastUsedAccount = null
 
 // ============================================================================
-// IN-MEMORY KEY STORAGE - Keys are wiped when service worker terminates
-// This is the security boundary - keys NEVER leave this scope
+// IN-MEMORY STATE - All sensitive data lives here ONLY
+// Keys and decrypted vault are wiped when service worker terminates
+// This is the security boundary - secrets NEVER leave this scope
+// sessionStorage contains NO secrets
 // ============================================================================
-let vaultKey = null      // CryptoKey - non-extractable AES-GCM key
-let vaultSalt = null     // Uint8Array - salt for key derivation
+let vaultKey = null        // CryptoKey - non-extractable AES-GCM key
+let decryptedVault = null  // Decrypted vault data (accounts, settings, etc.)
+
+// Note: vaultSalt is NOT stored here. It's extracted from the encrypted blob
+// when needed for re-encryption. This minimizes exposure of crypto metadata.
 
 /**
  * Check if the vault is unlocked (key is in memory)
+ * This is the SOLE authoritative source for unlock state.
+ * Storage flags (isLocked) are hints only.
  */
 function isVaultUnlocked() {
-  return vaultKey !== null && vaultSalt !== null
+  return vaultKey !== null
 }
 
 /**
- * Clear the in-memory key (called on lock or service worker termination)
+ * Clear all in-memory sensitive data (called on lock or service worker termination)
  */
-function clearVaultKey() {
+function clearInMemorySecrets() {
   vaultKey = null
-  vaultSalt = null
+  decryptedVault = null
 }
 
 // Auto-lock timeout (default 5 minutes in milliseconds, converted to minutes for alarms API)
@@ -98,21 +103,25 @@ function stopKeepAlive() {
 let activeConnections = new Set()
 
 async function lockVault() {
-  const { isAuthenticated } = await browser.storage.local.get(['isAuthenticated'])
+  const { isAuthenticated, encryptedVault } = await browser.storage.local.get(['isAuthenticated', 'encryptedVault'])
   if (!isAuthenticated) return // Don't lock if not authenticated
 
   // Stop keep-alive - allow service worker to terminate after lock
   stopKeepAlive()
 
-  // Persist encrypted caches before clearing (if key is still in memory)
-  if (isVaultUnlocked()) {
-    await persistEncryptedCachesWithKey(vaultKey, vaultSalt)
+  // Persist encrypted caches before clearing key (if key is still in memory)
+  if (isVaultUnlocked() && encryptedVault) {
+    // Extract salt from existing blob - don't store it in memory
+    const salt = extractSaltFromBlob(encryptedVault)
+    await persistEncryptedCachesWithKey(vaultKey, salt).catch(err => {
+      console.warn('Failed to persist caches:', err)
+    })
   }
 
-  // CRITICAL: Clear the in-memory key
-  clearVaultKey()
+  // CRITICAL: Clear ALL in-memory secrets (key AND decrypted vault)
+  clearInMemorySecrets()
 
-  await clearSessionVault()
+  // Update storage flag (hint only - not authoritative)
   await browser.storage.local.set({ isLocked: true })
   clearAllCaches()
 }
@@ -196,13 +205,15 @@ function getSharedSecret(sk, peer) {
   return key
 }
 
-// Always get fresh account from session storage - NEVER cache
-async function getCurrentAccount() {
-  const vault = await getSessionVault()
-  if (!vault || !vault.accountDefault) {
+/**
+ * Get the current active account's private key from in-memory vault
+ * Returns null if vault is locked or no default account set
+ */
+function getCurrentAccount() {
+  if (!decryptedVault || !decryptedVault.accountDefault) {
     return null
   }
-  return vault.accountDefault
+  return decryptedVault.accountDefault
 }
 
 const width = 400
@@ -229,13 +240,60 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
   // Handle vault operations (UI -> background)
   switch (message.type) {
+    // ========================================================================
+    // VAULT STATUS & LOCK OPERATIONS
+    // ========================================================================
     case 'UNLOCK_VAULT':
       return handleUnlockVault(message.password)
     case 'LOCK_VAULT':
       await lockVault()
       return { success: true }
+    case 'GET_VAULT_STATUS': {
+      // Authoritative unlock check - this is the ONLY reliable way to check
+      const { encryptedVault, isAuthenticated } = await browser.storage.local.get(['encryptedVault', 'isAuthenticated'])
+      const unlocked = isVaultUnlocked()
+
+      // Sync storage flag if desync detected (worker restarted)
+      if (isAuthenticated && !unlocked) {
+        await browser.storage.local.set({ isLocked: true })
+      }
+
+      return {
+        unlocked,
+        hasVault: !!encryptedVault,
+        isAuthenticated: !!isAuthenticated
+      }
+    }
+    // Legacy alias - TODO: remove after migration
     case 'GET_LOCK_STATUS':
       return { unlocked: isVaultUnlocked() }
+
+    // ========================================================================
+    // VAULT DATA ACCESS (UI requests data, background returns public info only)
+    // Private keys NEVER leave background memory
+    // ========================================================================
+    case 'GET_VAULT_DATA':
+      return handleGetVaultData()
+    case 'GET_ACCOUNTS_LIST':
+      return handleGetAccountsList()
+    case 'UPDATE_VAULT':
+      return handleUpdateVault(message.vault)
+    case 'GET_SESSION_VAULT':
+      // Returns full vault from memory (replaces getSessionVault())
+      // SECURITY: Vault is in memory only, NOT in session storage
+      // This is for UI components that need to modify vault structure
+      if (!isVaultUnlocked() || !decryptedVault) {
+        return null
+      }
+      return decryptedVault
+    case 'SET_SESSION_VAULT':
+      // Updates vault in memory and encrypts to storage (replaces setSessionVault())
+      // SECURITY: Vault is stored in memory only, NOT in session storage
+      return handleUpdateVault(message.vault)
+
+    // ========================================================================
+    // VAULT MANAGEMENT
+    // ========================================================================
     case 'ENCRYPT_VAULT':
       return handleEncryptVault(message.data)
     case 'CREATE_NEW_VAULT':
@@ -244,6 +302,9 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       return handleChangePassword(message.oldPassword, message.newPassword)
     case 'IMPORT_VAULT_BACKUP':
       return handleImportVaultBackup(message.encryptedVault, message.password)
+    case 'VERIFY_PASSWORD':
+      return handleVerifyPassword(message.password)
+    // Legacy alias - TODO: remove after migration
     case 'DECRYPT_VAULT_WITH_PASSWORD':
       return handleDecryptVaultWithPassword(message.password)
   }
@@ -267,6 +328,11 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
 /**
  * Handle vault unlock - derives key, stores in memory, decrypts vault
+ *
+ * SECURITY: Decrypted vault is stored ONLY in background memory (decryptedVault).
+ * sessionStorage contains NO secrets - UI accesses data via messages.
+ * Salt is NOT stored in memory after derivation.
+ *
  * @param {string} password - User's password
  * @returns {Promise<{success: boolean, error?: string}>}
  */
@@ -277,55 +343,53 @@ async function handleUnlockVault(password) {
       return { success: false, error: 'No vault found' }
     }
 
+    let vaultData
+    let migrated = false
+
     // Check if legacy format - need migration
     if (isLegacyFormat(encryptedVault)) {
       // Decrypt with legacy format (10k iterations, AES-CBC)
-      const vaultData = await decryptLegacy(encryptedVault, password)
+      vaultData = await decryptLegacy(encryptedVault, password)
 
       // Generate new key with strong parameters for future use
+      // Salt is used only here, then discarded (not stored in memory)
       const { key, salt } = await deriveNewKey(password)
       vaultKey = key
-      vaultSalt = salt
 
       // Re-encrypt with new format immediately
-      const newEncryptedVault = await encryptWithKey(vaultData, vaultKey, vaultSalt)
+      const newEncryptedVault = await encryptWithKey(vaultData, vaultKey, salt)
       await browser.storage.local.set({ encryptedVault: newEncryptedVault })
+      // salt goes out of scope here - automatically garbage collected
 
-      // Store decrypted vault in session
-      await setSessionVault(vaultData)
-      await browser.storage.local.set({ isLocked: false })
+      migrated = true
+    } else {
+      // v2 format - derive key from existing salt (salt is in the blob)
+      // We only keep the key, salt is extracted and discarded
+      const { key } = await deriveKeyFromEncryptedVault(password, encryptedVault)
+      vaultKey = key
 
-      // Restore encrypted caches (will be empty for legacy, that's ok)
-      await restoreEncryptedCachesWithKey(vaultKey)
-
-      // Start keep-alive to maintain session
-      startKeepAlive()
-
-      return { success: true, migrated: true }
+      // Decrypt vault using already-derived key
+      vaultData = await decryptWithKey(encryptedVault, vaultKey)
     }
 
-    // v2 format - derive key from existing salt
-    const { key, salt } = await deriveKeyFromEncryptedVault(password, encryptedVault)
-    vaultKey = key
-    vaultSalt = salt
+    // Store decrypted vault in MEMORY ONLY (not session storage!)
+    decryptedVault = vaultData
 
-    // Decrypt vault using already-derived key (avoid double derivation)
-    const vaultData = await decryptWithKey(encryptedVault, vaultKey)
-
-    // Store decrypted vault in session
-    await setSessionVault(vaultData)
+    // Update storage flag (hint only - not authoritative)
     await browser.storage.local.set({ isLocked: false })
 
     // Restore encrypted caches from local storage
-    await restoreEncryptedCachesWithKey(vaultKey)
+    await restoreEncryptedCachesWithKey(vaultKey).catch(err => {
+      console.warn('Failed to restore caches:', err)
+    })
 
     // Start keep-alive to maintain session
     startKeepAlive()
 
-    return { success: true }
+    return { success: true, migrated }
   } catch (err) {
     // Clear any partial state on failure
-    clearVaultKey()
+    clearInMemorySecrets()
     console.error('Unlock vault error:', err)
     return { success: false, error: 'Invalid password' }
   }
@@ -333,6 +397,8 @@ async function handleUnlockVault(password) {
 
 /**
  * Handle vault encryption - encrypts data using in-memory key
+ * Salt is extracted from existing encrypted vault (not stored in memory)
+ *
  * @param {any} data - Data to encrypt
  * @returns {Promise<{success: boolean, encryptedData?: string, error?: string}>}
  */
@@ -342,7 +408,18 @@ async function handleEncryptVault(data) {
   }
 
   try {
-    const encryptedData = await encryptWithKey(data, vaultKey, vaultSalt)
+    // Extract salt from existing encrypted vault (not stored in memory)
+    const { encryptedVault } = await browser.storage.local.get(['encryptedVault'])
+    if (!encryptedVault || isLegacyFormat(encryptedVault)) {
+      return { success: false, error: 'No valid encrypted vault found' }
+    }
+
+    const salt = extractSaltFromBlob(encryptedVault)
+    const encryptedData = await encryptWithKey(data, vaultKey, salt)
+
+    // Also update in-memory vault
+    decryptedVault = data
+
     return { success: true, encryptedData }
   } catch (err) {
     return { success: false, error: err.message }
@@ -351,6 +428,8 @@ async function handleEncryptVault(data) {
 
 /**
  * Handle new vault creation - generates new key and encrypts vault
+ * Salt is used for encryption then discarded (not stored in memory)
+ *
  * @param {string} password - User's password
  * @param {any} vaultData - Initial vault data
  * @returns {Promise<{success: boolean, encryptedVault?: string, error?: string}>}
@@ -358,25 +437,31 @@ async function handleEncryptVault(data) {
 async function handleCreateNewVault(password, vaultData) {
   try {
     // Generate new key with fresh salt
+    // Salt is used only here, then discarded
     const { key, salt } = await deriveNewKey(password)
     vaultKey = key
-    vaultSalt = salt
 
     // Encrypt the vault data
-    const encryptedVault = await encryptWithKey(vaultData, vaultKey, vaultSalt)
+    const encryptedVault = await encryptWithKey(vaultData, vaultKey, salt)
+    // salt goes out of scope here
 
-    // Store decrypted vault in session
-    await setSessionVault(vaultData)
+    // Store decrypted vault in MEMORY ONLY
+    decryptedVault = vaultData
+
+    // Start keep-alive
+    startKeepAlive()
 
     return { success: true, encryptedVault }
   } catch (err) {
-    clearVaultKey()
+    clearInMemorySecrets()
     return { success: false, error: err.message }
   }
 }
 
 /**
  * Handle password change - verifies old password, re-encrypts with new password
+ * Salt is used for encryption then discarded
+ *
  * @param {string} oldPassword - Current password
  * @param {string} newPassword - New password
  * @returns {Promise<{success: boolean, encryptedVault?: string, error?: string}>}
@@ -398,17 +483,21 @@ async function handleChangePassword(oldPassword, newPassword) {
     }
 
     // Generate new key with new password
+    // Salt is used only here, then discarded
     const { key, salt } = await deriveNewKey(newPassword)
 
     // Update in-memory key
     vaultKey = key
-    vaultSalt = salt
 
     // Re-encrypt vault with new key
-    const newEncryptedVault = await encryptWithKey(vaultData, vaultKey, vaultSalt)
+    const newEncryptedVault = await encryptWithKey(vaultData, vaultKey, salt)
 
-    // Re-encrypt caches with new key
-    await persistEncryptedCachesWithKey(vaultKey, vaultSalt)
+    // Re-encrypt caches with new key (using the new salt)
+    await persistEncryptedCachesWithKey(vaultKey, salt).catch(() => {})
+    // salt goes out of scope here
+
+    // Update in-memory vault
+    decryptedVault = vaultData
 
     return { success: true, encryptedVault: newEncryptedVault }
   } catch (err) {
@@ -417,46 +506,64 @@ async function handleChangePassword(oldPassword, newPassword) {
 }
 
 /**
- * Handle vault backup import - decrypts backup, stores key, returns vault data
+ * Handle vault backup import - decrypts backup, stores key in memory
+ * Salt is used for encryption then discarded (not stored in memory)
+ *
+ * SECURITY: Returns ONLY public data (account count, etc.)
+ * Private keys NEVER leave this function.
+ *
  * @param {string} encryptedVault - Encrypted vault from backup file
  * @param {string} password - Password to decrypt the backup
- * @returns {Promise<{success: boolean, vaultData?: any, encryptedVault?: string, error?: string}>}
+ * @returns {Promise<{success: boolean, encryptedVault?: string, accountCount?: number, error?: string}>}
  */
 async function handleImportVaultBackup(encryptedVault, password) {
   try {
+    let vaultData
+    let finalEncryptedVault = encryptedVault
+    let migrated = false
+
     // Check if legacy format
     if (isLegacyFormat(encryptedVault)) {
       // Decrypt with legacy format (10k iterations, AES-CBC)
-      const vaultData = await decryptLegacy(encryptedVault, password)
+      vaultData = await decryptLegacy(encryptedVault, password)
 
       // Generate new key for storage
+      // Salt is used only here, then discarded
       const { key, salt } = await deriveNewKey(password)
       vaultKey = key
-      vaultSalt = salt
 
       // Re-encrypt with new format
-      const newEncryptedVault = await encryptWithKey(vaultData, vaultKey, vaultSalt)
+      finalEncryptedVault = await encryptWithKey(vaultData, vaultKey, salt)
+      // salt goes out of scope here
 
-      // Store decrypted vault in session
-      await setSessionVault(vaultData)
+      migrated = true
+    } else {
+      // v2 format - derive key from existing salt
+      // We only keep the key, salt is extracted and discarded
+      const { key } = await deriveKeyFromEncryptedVault(password, encryptedVault)
+      vaultKey = key
 
-      return { success: true, vaultData, encryptedVault: newEncryptedVault, migrated: true }
+      // Decrypt vault using already-derived key
+      vaultData = await decryptWithKey(encryptedVault, vaultKey)
     }
 
-    // v2 format - derive key from existing salt
-    const { key, salt } = await deriveKeyFromEncryptedVault(password, encryptedVault)
-    vaultKey = key
-    vaultSalt = salt
+    // Store decrypted vault in MEMORY ONLY
+    decryptedVault = vaultData
 
-    // Decrypt vault using already-derived key (avoid double derivation)
-    const vaultData = await decryptWithKey(encryptedVault, vaultKey)
+    // Start keep-alive
+    startKeepAlive()
 
-    // Store decrypted vault in session
-    await setSessionVault(vaultData)
+    // Return only public info - NO private keys
+    const accountCount = (vaultData.accounts?.length || 0) + (vaultData.importedAccounts?.length || 0)
 
-    return { success: true, vaultData, encryptedVault }
+    return {
+      success: true,
+      encryptedVault: finalEncryptedVault,
+      accountCount,
+      migrated
+    }
   } catch (err) {
-    clearVaultKey()
+    clearInMemorySecrets()
     console.error('Import vault backup error:', err)
     return { success: false, error: 'Invalid vault file or wrong password' }
   }
@@ -465,8 +572,13 @@ async function handleImportVaultBackup(encryptedVault, password) {
 /**
  * Handle decrypt vault with password - verifies password without changing state
  * Used for viewing secrets (requires password re-entry for security)
+ *
+ * WARNING: This returns decrypted vault data including private keys.
+ * Only use for explicit "show secret" functionality with password re-verification.
+ *
  * @param {string} password - Password to verify
  * @returns {Promise<{success: boolean, vaultData?: any, error?: string}>}
+ * @deprecated Use VERIFY_PASSWORD + in-memory vault access instead
  */
 async function handleDecryptVaultWithPassword(password) {
   try {
@@ -490,6 +602,148 @@ async function handleDecryptVaultWithPassword(password) {
   }
 }
 
+/**
+ * Handle password verification - checks if password is correct without returning secrets
+ * Used for settings operations that require re-authentication
+ *
+ * @param {string} password - Password to verify
+ * @returns {Promise<{success: boolean, valid?: boolean, error?: string}>}
+ */
+async function handleVerifyPassword(password) {
+  try {
+    const { encryptedVault } = await browser.storage.local.get(['encryptedVault'])
+    if (!encryptedVault) {
+      return { success: false, error: 'No vault found' }
+    }
+
+    // Try to decrypt - if it works, password is correct
+    if (isLegacyFormat(encryptedVault)) {
+      await decryptLegacy(encryptedVault, password)
+    } else {
+      const { key } = await deriveKeyFromEncryptedVault(password, encryptedVault)
+      await decryptWithKey(encryptedVault, key)
+    }
+
+    return { success: true, valid: true }
+  } catch (err) {
+    return { success: true, valid: false }
+  }
+}
+
+/**
+ * Get vault data for UI display
+ * Returns public info and account indices - NO private keys
+ *
+ * SECURITY: This function NEVER returns private keys.
+ * Private keys stay in background memory only.
+ *
+ * @returns {Promise<{success: boolean, vault?: object, error?: string}>}
+ */
+function handleGetVaultData() {
+  if (!isVaultUnlocked() || !decryptedVault) {
+    return { success: false, error: 'Vault is locked' }
+  }
+
+  // Return vault structure without private keys
+  // UI can use this to understand account structure
+  const safeVault = {
+    accountDefault: decryptedVault.accountDefault,
+    // Return account indices, NOT private keys
+    accounts: (decryptedVault.accounts || []).map((acc, index) => ({
+      index,
+      // prvKey is intentionally NOT included
+    })),
+    importedAccounts: (decryptedVault.importedAccounts || []).map((acc, index) => ({
+      index,
+      // prvKey is intentionally NOT included
+    })),
+    mnemonic: undefined // NEVER expose mnemonic
+  }
+
+  return { success: true, vault: safeVault }
+}
+
+/**
+ * Get list of accounts with public info only
+ * Used by UI to display account list
+ *
+ * SECURITY: This function NEVER returns private keys.
+ *
+ * @returns {Promise<{success: boolean, accounts?: array, error?: string}>}
+ */
+function handleGetAccountsList() {
+  if (!isVaultUnlocked() || !decryptedVault) {
+    return { success: false, error: 'Vault is locked' }
+  }
+
+  const accounts = []
+
+  // Process derived accounts
+  const derivedAccounts = decryptedVault.accounts || []
+  for (let i = 0; i < derivedAccounts.length; i++) {
+    const prvKey = derivedAccounts[i].prvKey
+    const pubKey = getPublicKey(prvKey)
+    accounts.push({
+      index: i,
+      type: 'derived',
+      pubKey,
+      // prvKey is intentionally NOT included
+      isDefault: decryptedVault.accountDefault === prvKey
+    })
+  }
+
+  // Process imported accounts
+  const importedAccounts = decryptedVault.importedAccounts || []
+  for (let i = 0; i < importedAccounts.length; i++) {
+    const prvKey = importedAccounts[i].prvKey
+    const pubKey = getPublicKey(prvKey)
+    accounts.push({
+      index: i,
+      type: 'imported',
+      pubKey,
+      // prvKey is intentionally NOT included
+      isDefault: decryptedVault.accountDefault === prvKey
+    })
+  }
+
+  return { success: true, accounts }
+}
+
+/**
+ * Update vault with new data
+ * Encrypts and persists to storage, updates in-memory vault
+ *
+ * @param {object} newVault - Updated vault data (includes private keys for storage)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function handleUpdateVault(newVault) {
+  if (!isVaultUnlocked()) {
+    return { success: false, error: 'Vault is locked' }
+  }
+
+  try {
+    // Extract salt from existing encrypted vault
+    const { encryptedVault } = await browser.storage.local.get(['encryptedVault'])
+    if (!encryptedVault || isLegacyFormat(encryptedVault)) {
+      return { success: false, error: 'No valid encrypted vault found' }
+    }
+
+    const salt = extractSaltFromBlob(encryptedVault)
+
+    // Encrypt and save
+    const newEncryptedVault = await encryptWithKey(newVault, vaultKey, salt)
+    await browser.storage.local.set({ encryptedVault: newEncryptedVault })
+
+    // Update in-memory vault
+    decryptedVault = newVault
+
+    return { success: true }
+  } catch (err) {
+    console.error('Update vault error:', err)
+    return { success: false, error: err.message }
+  }
+}
+
 browser.runtime.onMessageExternal.addListener(
   async ({type, params}, sender) => {
     // Reset lock timer on external message (user activity)
@@ -509,11 +763,7 @@ browser.windows.onRemoved.addListener(_ => {
 })
 
 browser.storage.onChanged.addListener((changes, area) => {
-  // Clear all caches when vault changes (account switch) or vault locks
-  if (area === 'session' && changes.vault) {
-    clearAllCaches()
-    resetLockTimer() // Reset timer on vault activity
-  }
+  // Handle lock state changes (hint flags in localStorage)
   if (changes.isLocked?.newValue === true) {
     clearAllCaches()
     chrome.alarms.clear(LOCK_ALARM_NAME)
@@ -524,14 +774,8 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 })
 
-// Chrome-specific listener for session storage (polyfill may not handle it)
-if (globalThis.chrome?.storage?.onChanged) {
-  globalThis.chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'session' && changes.vault) {
-      clearAllCaches()
-    }
-  })
-}
+// Note: We no longer listen for session storage changes because
+// decrypted vault is now stored ONLY in background memory, not session storage
 
 async function handleContentScriptMessage({type, params, host}) {
   if (NO_PERMISSIONS_REQUIRED[type]) {

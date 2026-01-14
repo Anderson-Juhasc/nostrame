@@ -245,3 +245,23 @@ function hexToBytes(hex) {
   }
   return bytes
 }
+
+/**
+ * Extract salt from an encrypted v2 blob
+ * Used when re-encrypting vault without needing to persist salt in memory
+ *
+ * @param {string} encryptedData - Encrypted string (v2 format)
+ * @returns {Uint8Array} - The 32-byte salt
+ */
+export function extractSaltFromBlob(encryptedData) {
+  if (!encryptedData.startsWith('v2:')) {
+    throw new Error('Invalid format: expected v2 encrypted data')
+  }
+
+  const combined = Uint8Array.from(
+    atob(encryptedData.slice(3)),
+    c => c.charCodeAt(0)
+  )
+
+  return combined.slice(1, 1 + SALT_LENGTH)
+}

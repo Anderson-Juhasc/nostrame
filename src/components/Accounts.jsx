@@ -6,8 +6,7 @@ import hideStringMiddle from '../helpers/hideStringMiddle'
 import ImportAccountModal from '../modals/ImportAccountModal'
 import DeriveAccountModal from '../modals/DeriveAccountModal'
 import MainContext from '../contexts/MainContext'
-import { clearSessionVault, getSessionVault, setSessionVault } from '../common'
-import { clearAllCaches } from '../services/cache'
+import { getSessionVault, setSessionVault } from '../common'
 
 const Accounts = () => {
   const { accounts, defaultAccount, updateDefaultAccount } = useContext(MainContext)

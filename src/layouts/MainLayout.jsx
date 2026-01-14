@@ -12,17 +12,19 @@ const MainLayout = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   const fetchData = useCallback(async () => {
-    const storage = await browser.storage.local.get(['isLocked', 'isAuthenticated'])
-    // Check if key is in background memory
-    const { unlocked } = await browser.runtime.sendMessage({ type: 'GET_LOCK_STATUS' })
-    if (storage.isAuthenticated && !unlocked) {
-      setIsLocked(true)
-      setIsAuthenticated(true)
+    // GET_VAULT_STATUS is the AUTHORITATIVE source for unlock state
+    // Storage flags are hints only - background memory is the truth
+    const status = await browser.runtime.sendMessage({ type: 'GET_VAULT_STATUS' })
+
+    if (!status.isAuthenticated) {
+      setIsAuthenticated(false)
+      setIsLocked(false)
       return
     }
 
-    setIsLocked(storage.isLocked || false)
-    setIsAuthenticated(storage.isAuthenticated || false)
+    setIsAuthenticated(true)
+    // Use background's authoritative unlock state, not storage flag
+    setIsLocked(!status.unlocked)
   }, [])
 
   useEffect(() => {
