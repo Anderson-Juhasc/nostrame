@@ -91,7 +91,6 @@ export function closeDiscoveryPool() {
   try {
     discoveryPool.close(DISCOVERY_RELAYS)
     pendingRequests.clear()
-    console.log('Discovery pool connections closed')
   } catch (error) {
     console.error('Failed to close discovery pool:', error)
   }
@@ -473,23 +472,13 @@ export async function publishRelayList(signedEvent, relays) {
     // Wait for at least one to succeed (Promise.any semantics)
     await Promise.any(publishPromises)
 
-    // Log results for transparency
-    console.log(`Relay list published: ${succeeded.length} succeeded, ${failed.length} failed`)
-    if (succeeded.length > 0) {
-      console.log('Succeeded:', succeeded.join(', '))
-    }
-    if (failed.length > 0) {
-      console.warn('Failed:', failed.join(', '))
-    }
-
     // Invalidate cache after publishing
     await invalidateRelayListCache(signedEvent.pubkey)
 
     return { succeeded, failed }
   } catch (error) {
     // All relays failed
-    console.error('Failed to publish relay list to any relay:', error)
-    console.error('All failed relays:', relays.join(', '))
+    console.error('Failed to publish relay list:', error)
     throw error
   }
 }
@@ -518,7 +507,6 @@ export async function ensureRelayListExists(pubkey, privateKey, signEvent) {
     const publishTo = [...new Set([...DEFAULT_RELAYS, ...DISCOVERY_RELAYS])]
     await publishRelayList(signedEvent, publishTo)
 
-    console.log('Published default relay list for', pubkey)
     return true
   } catch (error) {
     console.error('Failed to ensure relay list exists:', error)

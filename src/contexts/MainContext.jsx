@@ -312,7 +312,6 @@ export const MainProvider = ({ children }) => {
 
       // Step 3: Only refresh stale/missing profiles from network (non-blocking)
       if (staleAccounts.length > 0) {
-        console.log(`Refreshing ${staleAccounts.length} stale profile(s)`)
         refreshProfilesInBackground(staleAccounts)
       }
     } catch (e) {

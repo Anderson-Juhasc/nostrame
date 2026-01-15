@@ -332,9 +332,6 @@ export async function cleanupOrphanedCache(validPubkeys) {
       [KEYS.LAST_REFRESH]: lastRefresh
     })
 
-    if (relayCleanupCount > 0 || profileCleanupCount > 0) {
-      console.log(`Cache cleanup: removed ${relayCleanupCount} relay lists, ${profileCleanupCount} profiles`)
-    }
   } catch (e) {
     console.error('Failed to cleanup orphaned cache:', e)
   }
@@ -543,7 +540,6 @@ export async function clearAllCaches() {
     if (!storage) return // No cache to clear
 
     await storage.remove([KEYS.RELAY_LIST_CACHE, KEYS.PROFILE_CACHE, KEYS.LAST_REFRESH])
-    console.log('All caches cleared')
   } catch (e) {
     console.error('Failed to clear caches:', e)
   }
@@ -675,14 +671,12 @@ export async function persistEncryptedCachesWithKey(key, salt) {
                     Object.keys(cacheData.profileCache).length > 0
 
     if (!hasData) {
-      console.log('No cache data to persist')
       return
     }
 
     // Encrypt and store in local storage
     const encryptedCache = await encryptWithKey(cacheData, key, salt)
     await browser.storage.local.set({ [KEYS.ENCRYPTED_CACHE]: encryptedCache })
-    console.log('Caches encrypted and persisted to local storage')
   } catch (e) {
     console.error('Failed to persist encrypted caches:', e)
   }
@@ -708,13 +702,11 @@ export async function restoreEncryptedCachesWithKey(key) {
     const { [KEYS.ENCRYPTED_CACHE]: encryptedCache } = await browser.storage.local.get(KEYS.ENCRYPTED_CACHE)
 
     if (!encryptedCache) {
-      console.log('No encrypted cache found in local storage')
       return false
     }
 
     // Skip legacy format caches - they'll be re-encrypted on next lock
     if (isLegacyFormat(encryptedCache)) {
-      console.log('Legacy cache format detected, discarding')
       await browser.storage.local.remove(KEYS.ENCRYPTED_CACHE)
       return false
     }
@@ -724,7 +716,6 @@ export async function restoreEncryptedCachesWithKey(key) {
 
     // Validate cache version
     if (cacheData.version !== CACHE_VERSION) {
-      console.log('Encrypted cache version mismatch, discarding')
       await browser.storage.local.remove(KEYS.ENCRYPTED_CACHE)
       return false
     }
@@ -736,7 +727,6 @@ export async function restoreEncryptedCachesWithKey(key) {
       [KEYS.LAST_REFRESH]: cacheData.lastRefresh || {}
     })
 
-    console.log('Caches restored from encrypted local storage')
     return true
   } catch (e) {
     console.error('Failed to restore encrypted caches:', e)
@@ -753,7 +743,6 @@ export async function restoreEncryptedCachesWithKey(key) {
 export async function clearEncryptedCache() {
   try {
     await browser.storage.local.remove(KEYS.ENCRYPTED_CACHE)
-    console.log('Encrypted cache cleared from local storage')
   } catch (e) {
     console.error('Failed to clear encrypted cache:', e)
   }
