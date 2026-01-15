@@ -57,7 +57,7 @@ const EditAccountModal = ({ isOpen, onClose, accountData, callBack }) => {
         name: account.name,
         display_name: account.name,
         about: account.about,
-        picture: account.picture,
+        picture: account.picture.startsWith('data:image/svg') ? '' : account.picture,
         banner: account.banner,
         nip05: account.nip05,
         lud16: account.lud16,
