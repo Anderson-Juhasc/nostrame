@@ -4,6 +4,6 @@ Nostrame does not collect, store, or transmit personal data. All processing happ
 
 The extension communicates only with Nostr relays chosen by the user or set as defaults by the extension. Only data that the user intentionally makes public is transmitted.
 
-Nostrame does not track users, run analytics, show ads, profile, or monetize data.
+Nostrame does not track users, run analytics, show ads, analyze user behavior, or monetize data.
 
 For questions about this policy, please contact us.
